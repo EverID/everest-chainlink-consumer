@@ -1,0 +1,23 @@
+{
+  "name": "everest-unit-consumer-contract",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "truffle test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EverID/everest-unit-consumer-contract.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/EverID/everest-unit-consumer-contract/issues"
+  },
+  "homepage": "https://github.com/EverID/everest-unit-consumer-contract#readme",
+  "dependencies": {
+    "truffle": "^5.5.19"
+  }
+}
