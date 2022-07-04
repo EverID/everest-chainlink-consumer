@@ -26,6 +26,7 @@ func (g *getter) init() {
 	g.vpr.AutomaticEnv()
 
 	g.bind("log.disable_sentry", "LOG_DISABLE_SENTRY")
+	g.bind("log.level", "LOG_LEVEL")
 
 	g.bind("adapter.api_key", "ADAPTER_API_KEY")
 	g.bind("adapter.chainlink_service_addr", "ADAPTER_CHAINLINK_SERVICE_ADDR")
@@ -37,7 +38,7 @@ func (g *getter) init() {
 }
 
 func (g *getter) bind(alias, env string) {
-	if _, ok := os.LookupEnv(env); ok {
+	if val, ok := os.LookupEnv(env); ok && len(val) != 0 {
 		_ = g.vpr.BindEnv(alias, env)
 	}
 }
