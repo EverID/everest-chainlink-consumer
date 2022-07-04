@@ -26,6 +26,6 @@ services:
     ports:
       - "6688:6688"
     volumes:
-      - ./node/chainlink:/chainlink/
-      - ./node/assets:/chainlink/assets
-    command: node start --password /chainlink/assets/password.txt --api /chainlink/assets/api.txt
+      - ./node/chainlink:/chainlink
+      - ./node/assets:/assets
+    command: node start --password /assets/password.txt --api /assets/api.txt
