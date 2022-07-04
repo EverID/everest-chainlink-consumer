@@ -17,7 +17,7 @@ observationSource = """
                  ]
     fetch        [
                   type=bridge
-                  name="unitsea"
+                  name="units-external-adapter"
                   requestData="{\\"id\\": $(jobSpec.externalJobID), \\"data\\": { \\"address\\": $(decode_cbor.address)}}"
                  ]
     parse_status [
