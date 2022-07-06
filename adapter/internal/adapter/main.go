@@ -33,7 +33,7 @@ type unitExternalAdapter struct {
 func (a *unitExternalAdapter) Run(h *bridges.Helper) (interface{}, error) {
 	data, err := h.HTTPCallRawWithOpts(
 		http.MethodGet,
-		fmt.Sprintf("%s/everest-chainlink/status/%s", a.cfg.ChainlinkServiceAddr, h.GetParam(endpointParam)),
+		fmt.Sprintf("%s%s", a.cfg.ChainlinkServiceAddr, h.GetParam(endpointParam)),
 		bridges.CallOpts{
 			Auth: bridges.NewAuth(bridges.AuthHeader, apiKeyHeader, a.cfg.ApiKey),
 		},
