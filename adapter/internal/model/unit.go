@@ -31,3 +31,9 @@ type Unit struct {
 	CreationDate time.Time      `json:"creation_date" structs:"-"`
 	KYCDate      time.Time      `json:"kyc_date" structs:"kyc_date"`
 }
+
+type Response struct {
+	Unit    Unit   `json:"data"`
+	Error   string `json:"error"`
+	Success bool   `json:"success"`
+}
