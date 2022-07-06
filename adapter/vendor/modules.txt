@@ -1,15 +1,26 @@
+# github.com/BurntSushi/toml v1.1.0
+## explicit; go 1.16
 # github.com/aws/aws-lambda-go v1.13.2
 ## explicit; go 1.12
 github.com/aws/aws-lambda-go/lambda
 github.com/aws/aws-lambda-go/lambda/handlertrace
 github.com/aws/aws-lambda-go/lambda/messages
 github.com/aws/aws-lambda-go/lambdacontext
-# github.com/fsnotify/fsnotify v1.4.7
+# github.com/ethereum/go-ethereum v1.10.20
+## explicit; go 1.17
+github.com/ethereum/go-ethereum/common
+github.com/ethereum/go-ethereum/common/hexutil
+# github.com/fatih/structs v1.1.0
 ## explicit
+github.com/fatih/structs
+# github.com/fsnotify/fsnotify v1.5.4
+## explicit; go 1.16
 github.com/fsnotify/fsnotify
 # github.com/getsentry/sentry-go v0.7.0
 ## explicit; go 1.12
 github.com/getsentry/sentry-go
+# github.com/google/go-cmp v0.5.5
+## explicit; go 1.8
 # github.com/hashicorp/hcl v1.0.0
 ## explicit
 github.com/hashicorp/hcl
@@ -25,19 +36,21 @@ github.com/hashicorp/hcl/json/token
 # github.com/konsorten/go-windows-terminal-sequences v1.0.3
 ## explicit
 github.com/konsorten/go-windows-terminal-sequences
+# github.com/kr/text v0.2.0
+## explicit
 # github.com/linkpoolio/bridges v0.0.0-20200226172010-aa6f132d477e
 ## explicit; go 1.12
 github.com/linkpoolio/bridges
 # github.com/magiconair/properties v1.8.0
 ## explicit
 github.com/magiconair/properties
-# github.com/mitchellh/mapstructure v1.1.2
-## explicit
+# github.com/mitchellh/mapstructure v1.4.1
+## explicit; go 1.14
 github.com/mitchellh/mapstructure
 # github.com/pelletier/go-toml v1.2.0
 ## explicit
 github.com/pelletier/go-toml
-# github.com/pkg/errors v0.8.1
+# github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
 # github.com/sirupsen/logrus v1.6.0
@@ -90,21 +103,25 @@ gitlab.com/tokend/keypair/figurekeypair
 gitlab.com/tokend/keypair/internal
 gitlab.com/tokend/keypair/internal/crc16
 gitlab.com/tokend/keypair/internal/strkey
-# golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
-## explicit; go 1.11
+# golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
+## explicit; go 1.17
 golang.org/x/crypto/ed25519
 golang.org/x/crypto/ed25519/internal/edwards25519
-# golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
-## explicit; go 1.12
+golang.org/x/crypto/sha3
+# golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a
+## explicit; go 1.17
+golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
-# golang.org/x/text v0.3.3
-## explicit; go 1.11
+# golang.org/x/text v0.3.7
+## explicit; go 1.17
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
+# gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
+## explicit; go 1.11
 # gopkg.in/guregu/null.v3 v3.4.0
 ## explicit
 gopkg.in/guregu/null.v3
-# gopkg.in/yaml.v2 v2.2.8
-## explicit
+# gopkg.in/yaml.v2 v2.4.0
+## explicit; go 1.15
 gopkg.in/yaml.v2
