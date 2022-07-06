@@ -67,8 +67,13 @@ func (a *unitExternalAdapter) Run(h *bridges.Helper) (interface{}, error) {
 	}
 
 	return map[string]interface{}{
-		"status":        response.Unit.Status,
-		"kyc_timestamp": response.Unit.KYCDate.Unix(),
+		"status": response.Unit.Status,
+		"kyc_timestamp": func() int64 {
+			if response.Unit.KYCDate.IsZero() {
+				return 0
+			}
+			return response.Unit.KYCDate.Unix()
+		}(),
 	}, nil
 }
 
