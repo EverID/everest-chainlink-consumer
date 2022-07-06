@@ -48,8 +48,12 @@ func (a *unitExternalAdapter) Run(h *bridges.Helper) (interface{}, error) {
 		return nil, err
 	}
 
-	if structs.HasZero(unit) {
-		return nil, errors.New("zero fields has been found")
+	if unit.Address.String() != h.GetParam(endpointParam) {
+		return nil, errors.New("wrong address")
+	}
+
+	if unit.CreationDate.Unix() == 0 {
+		return nil, errors.New("wrong creation date")
 	}
 
 	switch unit.Status {
