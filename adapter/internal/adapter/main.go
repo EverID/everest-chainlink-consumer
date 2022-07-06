@@ -1,18 +1,22 @@
 package adapter
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
 	"adapter/internal/config"
+	"adapter/internal/model"
+	"github.com/fatih/structs"
 	"github.com/linkpoolio/bridges"
+	"github.com/pkg/errors"
 	"gitlab.com/distributed_lab/logan/v3"
 )
 
 const (
 	adapterName   = "Unit External Adapter"
 	apiKeyHeader  = "X-Api-Key"
-	endpointParam = "address" // address
+	endpointParam = "address"
 )
 
 func NewAdapter(cfg config.AdapterConfig, logger *logan.Entry) bridges.Bridge {
@@ -27,11 +31,6 @@ type unitExternalAdapter struct {
 	logger *logan.Entry
 }
 
-type Response struct {
-	Status    uint
-	Timestamp uint
-}
-
 func (a *unitExternalAdapter) Run(h *bridges.Helper) (interface{}, error) {
 	data, err := h.HTTPCallRawWithOpts(
 		http.MethodGet,
@@ -40,7 +39,31 @@ func (a *unitExternalAdapter) Run(h *bridges.Helper) (interface{}, error) {
 			Auth: bridges.NewAuth(bridges.AuthHeader, apiKeyHeader, a.cfg.ApiKey),
 		},
 	)
-	return data, err
+	if err != nil {
+		return nil, err
+	}
+
+	var unit model.Unit
+	if err = json.Unmarshal(data, &unit); err != nil {
+		return nil, err
+	}
+
+	if structs.HasZero(unit) {
+		return nil, errors.New("zero fields has been found")
+	}
+
+	switch unit.Status {
+	case model.KYCUser:
+		if unit.KYCDate.Unix() == 0 {
+			return nil, errors.New("kyc date for kyc users should not be zero")
+		}
+	default:
+		if unit.KYCDate.Unix() != 0 {
+			return nil, errors.New("kyc date for non-kyc users should be zero")
+		}
+	}
+
+	return structs.Map(unit), err
 }
 
 func (a *unitExternalAdapter) Opts() *bridges.Opts {
