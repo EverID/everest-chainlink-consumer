@@ -15,9 +15,9 @@ type Adapter interface {
 }
 
 type AdapterConfig struct {
-	ApiKey               string `fig:"api_key,required"`
-	ChainlinkServiceAddr string `fig:"chainlink_service_addr,required"`
-	Port                 int    `fig:"port,required"`
+	ApiKey                   string `fig:"api_key,required"`
+	ChainlinkServiceEndpoint string `fig:"chainlink_service_endpoint,required"`
+	Port                     int    `fig:"port,required"`
 }
 
 type adapter struct {

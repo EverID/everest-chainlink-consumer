@@ -32,21 +32,27 @@ type unitExternalAdapter struct {
 }
 
 func (a *unitExternalAdapter) Run(h *bridges.Helper) (interface{}, error) {
+	a.logger.WithField("address", h.GetParam(endpointParam)).Info("got request")
+
 	data, err := h.HTTPCallRawWithOpts(
 		http.MethodGet,
-		fmt.Sprintf("%s%s", a.cfg.ChainlinkServiceAddr, h.GetParam(endpointParam)),
+		fmt.Sprintf("%s%s", a.cfg.ChainlinkServiceEndpoint, h.GetParam(endpointParam)),
 		bridges.CallOpts{
 			Auth: bridges.NewAuth(bridges.AuthHeader, apiKeyHeader, a.cfg.ApiKey),
 		},
 	)
 	if err != nil {
+		a.logger.WithError(err).Error("failed to make request")
 		return nil, errors.Wrap(err, "failed to make request")
 	}
 
 	unit, err := safeUnpack(data)
 	if err != nil {
+		a.logger.WithError(err).Error("failed to safely unpack data")
 		return nil, errors.Wrap(err, "failed to safely unpack data")
 	}
+
+	a.logger.WithField("unit", unit).Info("got unit")
 
 	return map[string]interface{}{
 		"status": unit.Status,

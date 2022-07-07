@@ -29,7 +29,7 @@ func (g *getter) init() {
 	g.bind("log.level", "LOG_LEVEL")
 
 	g.bind("adapter.api_key", "ADAPTER_API_KEY")
-	g.bind("adapter.chainlink_service_addr", "ADAPTER_CHAINLINK_SERVICE_ADDR")
+	g.bind("adapter.chainlink_service_endpoint", "ADAPTER_CHAINLINK_SERVICE_ENDPOINT")
 	g.bind("adapter.port", "ADAPTER_PORT")
 
 	for _, key := range g.vpr.AllKeys() {
