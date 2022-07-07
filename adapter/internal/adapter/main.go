@@ -7,6 +7,7 @@ import (
 
 	"adapter/internal/config"
 	"adapter/internal/model"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/linkpoolio/bridges"
 	"github.com/pkg/errors"
 	"gitlab.com/distributed_lab/logan/v3"
@@ -39,40 +40,21 @@ func (a *unitExternalAdapter) Run(h *bridges.Helper) (interface{}, error) {
 		},
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to make request")
 	}
 
-	var response model.Response
-	if err = json.Unmarshal(data, &response); err != nil {
-		return nil, err
-	}
-
-	if response.Unit.Address.String() != h.GetParam(endpointParam) {
-		return nil, errors.New("wrong address")
-	}
-
-	if response.Unit.CreationDate.Unix() == 0 {
-		return nil, errors.New("wrong creation date")
-	}
-
-	switch response.Unit.Status {
-	case model.KYCUser:
-		if response.Unit.KYCDate.Unix() == 0 {
-			return nil, errors.New("kyc date for kyc users should not be zero")
-		}
-	default:
-		if response.Unit.KYCDate.Unix() != 0 {
-			return nil, errors.New("kyc date for non-kyc users should be zero")
-		}
+	unit, err := safeUnpack(data)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to safely unpack data")
 	}
 
 	return map[string]interface{}{
-		"status": response.Unit.Status,
+		"status": unit.Status,
 		"kyc_timestamp": func() int64 {
-			if response.Unit.KYCDate.IsZero() {
+			if unit.KYCDate.IsZero() {
 				return 0
 			}
-			return response.Unit.KYCDate.Unix()
+			return unit.KYCDate.Unix()
 		}(),
 	}, nil
 }
@@ -81,4 +63,33 @@ func (a *unitExternalAdapter) Opts() *bridges.Opts {
 	return &bridges.Opts{
 		Name: adapterName,
 	}
+}
+
+func safeUnpack(data []byte) (model.Unit, error) {
+	var response model.Response
+	if err := json.Unmarshal(data, &response); err != nil {
+		return model.Unit{}, err
+	}
+
+	zeroAddress := common.Address{}
+	if response.Unit.Address.String() != zeroAddress.String() {
+		return model.Unit{}, errors.New("zero address")
+	}
+
+	if response.Unit.CreationDate.Unix() == 0 {
+		return model.Unit{}, errors.New("wrong creation date")
+	}
+
+	switch response.Unit.Status {
+	case model.KYCUser:
+		if response.Unit.KYCDate.Unix() == 0 {
+			return model.Unit{}, errors.New("kyc date for kyc users should not be zero")
+		}
+	default:
+		if response.Unit.KYCDate.Unix() != 0 {
+			return model.Unit{}, errors.New("kyc date for non-kyc users should be zero")
+		}
+	}
+
+	return response.Unit, nil
 }
