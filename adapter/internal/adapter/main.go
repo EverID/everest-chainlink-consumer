@@ -88,11 +88,11 @@ func safeUnpack(data []byte) (model.Unit, error) {
 
 	switch response.Unit.Status {
 	case model.KYCUser:
-		if response.Unit.KYCDate.Unix() == 0 {
+		if response.Unit.KYCDate.IsZero() {
 			return model.Unit{}, errors.New("kyc date for kyc users should not be zero")
 		}
 	default:
-		if response.Unit.KYCDate.Unix() != 0 {
+		if !response.Unit.KYCDate.IsZero() {
 			return model.Unit{}, errors.New("kyc date for non-kyc users should be zero")
 		}
 	}
