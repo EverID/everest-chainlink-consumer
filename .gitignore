@@ -4,3 +4,4 @@ package-lock.json
 contracts/artifacts
 node/data
 node/chainlink
+build
