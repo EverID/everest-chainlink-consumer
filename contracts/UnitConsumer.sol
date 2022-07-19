@@ -5,6 +5,7 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract UnitConsumer is ChainlinkClient, Ownable {
     using Chainlink for Chainlink.Request;
@@ -62,6 +63,10 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         returns (bytes32 requestId)
     {
         require(_revealee != address(0), "Revelaee should not be zero address.");
+        require(
+            IERC20(chainlinkTokenAddress()).transferFrom(msg.sender, address(this), oraclePayment),
+            "Failed to transfer link token."
+        );
 
         Chainlink.Request memory request = buildChainlinkRequest(
             jobId,
@@ -153,7 +158,11 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         setChainlinkOracle(_oracle);
     }
 
-    function setOraclePayments(uint _oraclePayment) external onlyOwner {
+    function setLink(address _link) external onlyOwner {
+        setChainlinkToken(_link);
+    }
+
+    function setOraclePayment(uint _oraclePayment) external onlyOwner {
         oraclePayment = _oraclePayment;
     }
 
@@ -161,8 +170,12 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         jobId = stringToBytes32(_jobId);
     }
 
-    function oracle() external view returns (address) {
+    function oracleAddress() external view returns (address) {
         return chainlinkOracleAddress();
+    }
+
+    function linkAddress() external view returns (address) {
+        return chainlinkTokenAddress();
     }
 
     function stringToBytes32(string memory _source)
@@ -170,6 +183,8 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         pure
         returns (bytes32)
     {
-        return bytes32(bytes(_source));
+        bytes memory source = bytes(_source);
+        require(source.length == 32, "Incorrect length.");
+        return bytes32(source);
     }
 }
