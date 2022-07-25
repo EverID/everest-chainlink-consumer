@@ -12,6 +12,7 @@ const (
 	Undefined Status = iota
 	KYCUser
 	HumanUnique
+	NotFound
 )
 
 func (s Status) String() string {

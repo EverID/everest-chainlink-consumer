@@ -53,8 +53,8 @@ An external adapter and a chainlink node
 ```ADAPTER_API_KEY=KEY```
 - API_KEY for the external adapter (to communicate with everest-chainlink service)
 
-```ADAPTER_CHAINLINK_SERVICE_ENDPOINT={EVEREST_CHAINLINK}/everest-chainlink/status/```
-- Endpoint in everest-chainlink service from which adapter will take status by address
+```ADAPTER_CHAINLINK_SERVICE_URL=http://```
+- Everest-chainlink service url
 
 ```ADAPTER_PORT=8085```
 - Adapter port

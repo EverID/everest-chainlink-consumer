@@ -36,7 +36,7 @@ func (a *unitExternalAdapter) Run(h *bridges.Helper) (interface{}, error) {
 
 	data, err := h.HTTPCallRawWithOpts(
 		http.MethodGet,
-		fmt.Sprintf("%s%s", a.cfg.ChainlinkServiceEndpoint, h.GetParam(endpointParam)),
+		fmt.Sprintf("%s/chainlink-service/status/%s", a.cfg.ChainlinkServiceEndpoint, h.GetParam(endpointParam)),
 		bridges.CallOpts{
 			Auth: bridges.NewAuth(bridges.AuthHeader, apiKeyHeader, a.cfg.ApiKey),
 		},
@@ -82,7 +82,7 @@ func safeUnpack(data []byte) (model.Unit, error) {
 		return model.Unit{}, errors.New("zero address")
 	}
 
-	if response.Unit.CreationDate.Unix() == 0 {
+	if response.Unit.CreationDate.Unix() == 0 && response.Unit.Status != model.NotFound {
 		return model.Unit{}, errors.New("wrong creation date")
 	}
 
