@@ -1,8 +1,0 @@
-POST http://localhost:8085/
-Content-Type:application/json
-
-{
-  "data": {
-    "address": "0x0000000000000000000000000000000000000001"
-  }
-}
