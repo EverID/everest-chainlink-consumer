@@ -13,7 +13,8 @@ contract UnitConsumer is ChainlinkClient, Ownable {
     enum Status {
         Undefined,
         KYCUser,
-        HumanUnique
+        HumanUnique,
+        NotFound
     }
 
     struct Request {
@@ -146,7 +147,10 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         if (_status == Status.KYCUser) {
             return "kyc-user";
         }
-        return "human-unique";
+        if (_status == Status.HumanUnique) {
+            return "human-unique";
+        }
+        return "not-found";
     }
 
     function withdrawLink() external onlyOwner {

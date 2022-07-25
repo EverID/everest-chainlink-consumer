@@ -102,6 +102,7 @@ contract("UnitConsumer", function([owner, stranger, addr, ...accounts]) {
             expect(await this.consumer.statusToString(0)).to.be.equal("undefined");
             expect(await this.consumer.statusToString(1)).to.be.equal("kyc-user");
             expect(await this.consumer.statusToString(2)).to.be.equal("human-unique");
+            expect(await this.consumer.statusToString(3)).to.be.equal("not-found");
         })
     });
 });
