@@ -109,7 +109,7 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ..
     });
 
     // TODO: expand the number of test cases
-    describe("#requestStatus #fullfil #lastRequestId", async function () {
+    describe.only("#requestStatus #fullfil #lastRequestId", async function () {
         it("should set status correctly", async function () {
             await this.oracle.setAuthorizedSenders([node], {from: owner});
 
@@ -129,7 +129,8 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ..
                 ...oracle.convertFulfill2Params(request, responseTypes, responseValues, {from: node}),
             );
 
-            const fulfilledRequest = await this.consumer.getLastRequestId({from: revealer});
+            const requestId = await this.consumer.getLastRequestId({from: revealer});
+            const fulfilledRequest = await this.consumer.getRequest(requestId, {from: revealer})
 
             console.log(fulfilledRequest)
             // [
