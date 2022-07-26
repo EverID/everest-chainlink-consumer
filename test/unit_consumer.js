@@ -116,8 +116,8 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ..
             await this.link.transfer(revealer, oraclePayment, {from: owner});
             await this.link.approve(this.consumer.address, oraclePayment, {from: revealer});
 
-            const fulfillTx = await this.consumer.requestStatus(revealee, {from: revealer});
-            const request = oracle.decodeRunRequest(fulfillTx.receipt.rawLogs?.[4]);
+            const requestTx = await this.consumer.requestStatus(revealee, {from: revealer});
+            const request = oracle.decodeRunRequest(requestTx.receipt.rawLogs?.[4]);
 
             const status = "1";
             const kycTimestamp = "1658845449";
