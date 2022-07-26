@@ -26,6 +26,7 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         Status status;
     }
 
+    mapping(address => bytes32) private _lastRequestId;
     mapping(bytes32 => Request) private _requests;
     bytes32 public jobId;
     uint public oraclePayment;
@@ -60,8 +61,7 @@ contract UnitConsumer is ChainlinkClient, Ownable {
     function requestStatus(
         address _revealee
     )
-        external
-        returns (bytes32 requestId)
+    external
     {
         require(_revealee != address(0), "Revelaee should not be zero address.");
         require(
@@ -75,14 +75,15 @@ contract UnitConsumer is ChainlinkClient, Ownable {
             this.fulfill.selector
         );
         request.add("address", Strings.toHexString(_revealee));
-        requestId = sendChainlinkRequest(request, oraclePayment);
 
+        bytes32 requestId = sendChainlinkRequest(request, oraclePayment);
         _requests[requestId] = Request({
-            kycTimestamp: 0,
-            revealer: msg.sender,
-            revealee: _revealee,
-            status: Status.Undefined
+        kycTimestamp: 0,
+        revealer: msg.sender,
+        revealee: _revealee,
+        status: Status.Undefined
         });
+        _lastRequestId[msg.sender] = requestId;
 
         emit Requested(requestId, msg.sender, _revealee);
     }
@@ -92,8 +93,8 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         Status _status,
         uint _kycTimestamp
     )
-        external
-        recordChainlinkFulfillment(_requestId)
+    external
+    recordChainlinkFulfillment(_requestId)
     {
         if (_status == Status.KYCUser) {
             require(_kycTimestamp != 0, "_kycTimestamp should not be zero for KYCUser.");
@@ -115,21 +116,27 @@ contract UnitConsumer is ChainlinkClient, Ownable {
     function getRequest(
         bytes32 _requestId
     )
-        external
-        view
-        returns (Request memory)
+    external
+    view
+    returns (Request memory)
     {
         require(requestExists(_requestId), "Request does not exist.");
 
         return _requests[_requestId];
     }
 
+    function getLastRequestId() external view returns (bytes32) {
+        require(_lastRequestId[msg.sender] != 0, "No requests yet.");
+
+        return _lastRequestId[msg.sender];
+    }
+
     function requestExists(
         bytes32 _requestId
     )
-        public
-        view
-        returns (bool)
+    public
+    view
+    returns (bool)
     {
         return _requests[_requestId].revealer != address(0);
     }
@@ -137,9 +144,9 @@ contract UnitConsumer is ChainlinkClient, Ownable {
     function statusToString(
         Status _status
     )
-        external
-        pure
-        returns (string memory)
+    external
+    pure
+    returns (string memory)
     {
         if (_status == Status.Undefined) {
             return "undefined";
@@ -183,9 +190,9 @@ contract UnitConsumer is ChainlinkClient, Ownable {
     }
 
     function stringToBytes32(string memory _source)
-        private
-        pure
-        returns (bytes32)
+    private
+    pure
+    returns (bytes32)
     {
         bytes memory source = bytes(_source);
         require(source.length == 32, "Incorrect length.");
