@@ -61,7 +61,7 @@ contract UnitConsumer is ChainlinkClient, Ownable {
     function requestStatus(
         address _revealee
     )
-    external
+        external
     {
         require(_revealee != address(0), "Revelaee should not be zero address.");
         require(
@@ -78,10 +78,10 @@ contract UnitConsumer is ChainlinkClient, Ownable {
 
         bytes32 requestId = sendChainlinkRequest(request, oraclePayment);
         _requests[requestId] = Request({
-        kycTimestamp: 0,
-        revealer: msg.sender,
-        revealee: _revealee,
-        status: Status.Undefined
+            kycTimestamp: 0,
+            revealer: msg.sender,
+            revealee: _revealee,
+            status: Status.Undefined
         });
         _lastRequestId[msg.sender] = requestId;
 
@@ -93,8 +93,8 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         Status _status,
         uint _kycTimestamp
     )
-    external
-    recordChainlinkFulfillment(_requestId)
+        external
+        recordChainlinkFulfillment(_requestId)
     {
         if (_status == Status.KYCUser) {
             require(_kycTimestamp != 0, "_kycTimestamp should not be zero for KYCUser.");
@@ -116,9 +116,9 @@ contract UnitConsumer is ChainlinkClient, Ownable {
     function getRequest(
         bytes32 _requestId
     )
-    external
-    view
-    returns (Request memory)
+        external
+        view
+        returns (Request memory)
     {
         require(requestExists(_requestId), "Request does not exist.");
 
@@ -134,9 +134,9 @@ contract UnitConsumer is ChainlinkClient, Ownable {
     function requestExists(
         bytes32 _requestId
     )
-    public
-    view
-    returns (bool)
+        public
+        view
+        returns (bool)
     {
         return _requests[_requestId].revealer != address(0);
     }
@@ -144,9 +144,9 @@ contract UnitConsumer is ChainlinkClient, Ownable {
     function statusToString(
         Status _status
     )
-    external
-    pure
-    returns (string memory)
+        external
+        pure
+        returns (string memory)
     {
         if (_status == Status.Undefined) {
             return "undefined";
@@ -190,9 +190,9 @@ contract UnitConsumer is ChainlinkClient, Ownable {
     }
 
     function stringToBytes32(string memory _source)
-    private
-    pure
-    returns (bytes32)
+        private
+        pure
+        returns (bytes32)
     {
         bytes memory source = bytes(_source);
         require(source.length == 32, "Incorrect length.");
