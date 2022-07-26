@@ -36,7 +36,7 @@ func (a *unitExternalAdapter) Run(h *bridges.Helper) (interface{}, error) {
 
 	data, err := h.HTTPCallRawWithOpts(
 		http.MethodGet,
-		fmt.Sprintf("%s/chainlink-service/status/%s", a.cfg.ChainlinkServiceEndpoint, h.GetParam(endpointParam)),
+		fmt.Sprintf("%s/everest-chainlink/status/%s", a.cfg.ChainlinkServiceEndpoint, h.GetParam(endpointParam)),
 		bridges.CallOpts{
 			Auth: bridges.NewAuth(bridges.AuthHeader, apiKeyHeader, a.cfg.ApiKey),
 		},
@@ -46,7 +46,7 @@ func (a *unitExternalAdapter) Run(h *bridges.Helper) (interface{}, error) {
 		return nil, errors.Wrap(err, "failed to make request")
 	}
 
-	unit, err := safeUnpack(data)
+	unit, err := a.safeUnpack(data)
 	if err != nil {
 		a.logger.WithError(err).Error("failed to safely unpack data")
 		return nil, errors.Wrap(err, "failed to safely unpack data")
@@ -71,14 +71,16 @@ func (a *unitExternalAdapter) Opts() *bridges.Opts {
 	}
 }
 
-func safeUnpack(data []byte) (model.Unit, error) {
+func (a *unitExternalAdapter) safeUnpack(data []byte) (model.Unit, error) {
 	var response model.Response
 	if err := json.Unmarshal(data, &response); err != nil {
 		return model.Unit{}, err
 	}
 
+	a.logger.WithField("response", fmt.Sprintf("%+v", response)).Debug("got response")
+
 	zeroAddress := common.Address{}
-	if response.Unit.Address.String() != zeroAddress.String() {
+	if response.Unit.Address.String() == zeroAddress.String() {
 		return model.Unit{}, errors.New("zero address")
 	}
 
