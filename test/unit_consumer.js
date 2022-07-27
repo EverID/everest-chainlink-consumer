@@ -113,7 +113,7 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ra
         })
     });
 
-    describe.only("#getRequest #requestExists", async function () {
+    describe("#getRequest #requestExists", async function () {
         const mockedRequestId = helpers.toBytes32String("mocked");
 
         it("should revert if request with passed request id does not exist", async function () {
