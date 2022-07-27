@@ -159,7 +159,7 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ra
                     _requestId: this.requestId,
                     _revealer: revealer,
                     _revealee: revealee,
-                })
+                });
             });
 
             it("should not fulfill from unauthorized node", async function () {
