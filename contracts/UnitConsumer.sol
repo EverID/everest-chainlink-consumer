@@ -63,11 +63,12 @@ contract UnitConsumer is ChainlinkClient, Ownable {
     )
         external
     {
-        require(_revealee != address(0), "Revelaee should not be zero address.");
-        require(
-            IERC20(chainlinkTokenAddress()).transferFrom(msg.sender, address(this), oraclePayment),
-            "Failed to transfer link token."
-        );
+        require(_revealee != address(0), "Revelaee should not be zero address");
+
+        try IERC20(chainlinkTokenAddress()).transferFrom(msg.sender, address(this), oraclePayment) returns (bool) {
+        } catch {
+            revert("Failed to transferFrom link token");
+        }
 
         Chainlink.Request memory request = buildChainlinkRequest(
             jobId,
@@ -97,9 +98,9 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         recordChainlinkFulfillment(_requestId)
     {
         if (_status == Status.KYCUser) {
-            require(_kycTimestamp != 0, "_kycTimestamp should not be zero for KYCUser.");
+            require(_kycTimestamp != 0, "_kycTimestamp should not be zero for KYCUser");
         } else {
-            require(_kycTimestamp == 0, "_kycTimestamp should be zero for non-KYCUser.");
+            require(_kycTimestamp == 0, "_kycTimestamp should be zero for non-KYCUser");
         }
         _requests[_requestId].status = _status;
         _requests[_requestId].kycTimestamp = _kycTimestamp;
@@ -120,13 +121,13 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         view
         returns (Request memory)
     {
-        require(requestExists(_requestId), "Request does not exist.");
+        require(requestExists(_requestId), "Request does not exist");
 
         return _requests[_requestId];
     }
 
     function getLastRequestId() external view returns (bytes32) {
-        require(_lastRequestId[msg.sender] != 0, "No requests yet.");
+        require(_lastRequestId[msg.sender] != 0, "No requests yet");
 
         return _lastRequestId[msg.sender];
     }
@@ -162,7 +163,7 @@ contract UnitConsumer is ChainlinkClient, Ownable {
 
     function withdrawLink() external onlyOwner {
         LinkTokenInterface link = LinkTokenInterface(chainlinkTokenAddress());
-        require(link.transfer(msg.sender, link.balanceOf(address(this))), "Unable to transfer.");
+        require(link.transfer(msg.sender, link.balanceOf(address(this))), "Unable to transfer");
     }
 
     function setOracle(address _oracle) external onlyOwner {
@@ -195,7 +196,7 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         returns (bytes32)
     {
         bytes memory source = bytes(_source);
-        require(source.length == 32, "Incorrect length.");
+        require(source.length == 32, "Incorrect length");
         return bytes32(source);
     }
 }
