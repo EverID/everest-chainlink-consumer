@@ -109,7 +109,7 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ..
     });
 
     // TODO: expand the number of test cases
-    describe.only("#requestStatus #fullfil #lastRequestId", async function () {
+    describe("#requestStatus #fulfill #lastRequestId", async function () {
         it("should set status correctly", async function () {
             await this.oracle.setAuthorizedSenders([node], {from: owner});
 
