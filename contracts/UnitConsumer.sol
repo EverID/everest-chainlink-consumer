@@ -97,11 +97,14 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         external
         recordChainlinkFulfillment(_requestId)
     {
+        require(_status != Status.Undefined, "Status should not be Undefined");
+
         if (_status == Status.KYCUser) {
             require(_kycTimestamp != 0, "_kycTimestamp should not be zero for KYCUser");
         } else {
             require(_kycTimestamp == 0, "_kycTimestamp should be zero for non-KYCUser");
         }
+
         _requests[_requestId].status = _status;
         _requests[_requestId].kycTimestamp = _kycTimestamp;
 
