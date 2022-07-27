@@ -4,7 +4,7 @@ const LinkToken = artifacts.require("LinkToken");
 
 const { constants, expectRevert, expectEvent } = require("@openzeppelin/test-helpers");
 const { expect } = require("chai");
-const { oracle } = require("@chainlink/test-helpers");
+const { oracle, helpers } = require("@chainlink/test-helpers");
 
 contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, randomAddress]) {
     const jobId = "509e8dd8de054d3f918640ab0a2b77d8";
@@ -113,8 +113,8 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ra
         })
     });
 
-    describe("#getRequest #requestExists", async function () {
-        const mockedRequestId = "0x6d6f636b65640000000000000000000000000000000000000000000000000000"; // formatBytes32String("mocked")
+    describe.only("#getRequest #requestExists", async function () {
+        const mockedRequestId = helpers.toBytes32String("mocked");
 
         it("should revert if request with passed request id does not exist", async function () {
             expect(await this.consumer.requestExists(mockedRequestId, {from: stranger})).to.be.false;
