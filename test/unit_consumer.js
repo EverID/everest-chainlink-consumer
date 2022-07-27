@@ -2,11 +2,11 @@ const UnitConsumer = artifacts.require("UnitConsumer");
 const Oracle = artifacts.require("Operator");
 const LinkToken = artifacts.require("LinkToken");
 
-const { constants, expectRevert, expectEvent, BN } = require("@openzeppelin/test-helpers");
+const { constants, expectRevert, expectEvent } = require("@openzeppelin/test-helpers");
 const { expect } = require("chai");
 const { oracle } = require("@chainlink/test-helpers");
 
-contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ...accounts]) {
+contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, randomAddress]) {
     const jobId = "509e8dd8de054d3f918640ab0a2b77d8";
     const oraclePayment = "1000000000000000000"; // 10 ** 18
 
@@ -29,19 +29,19 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ..
         expect(await this.consumer.oracleAddress()).to.be.equal(this.oracle.address);
         expect(await this.consumer.jobId()).to.be.equal(web3.utils.asciiToHex(jobId));
         expect(await this.consumer.oraclePayment()).to.be.bignumber.equal(oraclePayment);
-        expect(await this.consumer.linkAddress()).to.be.equal(link);
+        expect(await this.consumer.linkAddress()).to.be.equal(this.link.address);
     });
 
     describe("#setOracle", async function () {
         it("should set properly with owner sender", async function () {
-            await this.consumer.setOracle(addr, {from: owner});
-            expect(await this.consumer.oracleAddress()).to.be.equal(addr);
+            await this.consumer.setOracle(randomAddress, {from: owner});
+            expect(await this.consumer.oracleAddress()).to.be.equal(randomAddress);
         });
 
         it("should revert if sender is not an owner", async function () {
             await expectRevert(
-                this.consumer.setOracle(addr, {from: stranger}),
-                'Ownable: caller is not the owner'
+                this.consumer.setOracle(randomAddress, {from: stranger}),
+                "Ownable: caller is not the owner"
             );
         });
     });
@@ -55,22 +55,21 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ..
         it("should revert if sender is not an owner", async function () {
             await expectRevert(
                 this.consumer.setOraclePayment("1", {from: stranger}),
-                'Ownable: caller is not the owner'
+                "Ownable: caller is not the owner"
             );
         });
     });
 
     describe("#setLink", async function () {
-        const mockedNewLinkAddress = "0xa36085F69e2889c224210F603D836748e7dC0088";
         it("should set properly with owner sender", async function () {
-            await this.consumer.setLink(mockedNewLinkAddress, {from: owner});
-            expect(await this.consumer.linkAddress()).to.be.equal(mockedNewLinkAddress);
+            await this.consumer.setLink(randomAddress, {from: owner});
+            expect(await this.consumer.linkAddress()).to.be.equal(randomAddress);
         });
 
         it("should revert if sender is not an owner", async function () {
             await expectRevert(
-                this.consumer.setLink(mockedNewLinkAddress, {from: stranger}),
-                'Ownable: caller is not the owner'
+                this.consumer.setLink(randomAddress, {from: stranger}),
+                "Ownable: caller is not the owner"
             );
         });
     });
@@ -87,7 +86,7 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ..
         it("should revert if sender is not an owner", async function () {
             await expectRevert(
                 this.consumer.setJobId(newJobId, {from: stranger}),
-                'Ownable: caller is not the owner'
+                "Ownable: caller is not the owner"
             );
         });
 
@@ -108,41 +107,151 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ..
         });
     });
 
-    // TODO: expand the number of test cases
-    describe("#requestStatus #fulfill #lastRequestId", async function () {
-        it("should set status correctly", async function () {
-            await this.oracle.setAuthorizedSenders([node], {from: owner});
+    describe("#getLastRequestId", async function () {
+        it("should revert if no requests yet", async function () {
+            await expectRevert(this.consumer.getLastRequestId(), "No requests yet");
+        })
+    });
 
+    describe("#getRequest #requestExists", async function () {
+        const mockedRequestId = "0x6d6f636b65640000000000000000000000000000000000000000000000000000"; // formatBytes32String("mocked")
+
+        it("should revert if request with passed request id does not exist", async function () {
+            expect(await this.consumer.requestExists(mockedRequestId, {from: stranger})).to.be.false;
+
+            await expectRevert(
+                this.consumer.getRequest(mockedRequestId, {from: owner}),
+                "Request does not exist"
+            );
+        });
+    });
+
+    describe("#requestStatus #fulfill", async function () {
+        beforeEach(async function () {
             await this.link.transfer(revealer, oraclePayment, {from: owner});
-            await this.link.approve(this.consumer.address, oraclePayment, {from: revealer});
+        });
 
-            const requestTx = await this.consumer.requestStatus(revealee, {from: revealer});
-            const request = oracle.decodeRunRequest(requestTx.receipt.rawLogs?.[4]);
+        it("should revert if not enough allowance", async function () {
+            await expectRevert(
+                this.consumer.requestStatus(revealee, {from: revealer}),
+                "Failed to transferFrom link token."
+            );
+        });
 
-            const status = "1";
-            const kycTimestamp = "1658845449";
+        describe("if approved", async function () {
+            const undefinedStatus = "0";
+            const kycUserStatus = "1";
+            const humanUniqueStatus = "2";
+            const notFoundStatus = "3";
+
+            const nonZeroKycTimestamp = "1658845449";
+            const zeroKycTimestamp = "0";
 
             const responseTypes = ["uint8", "uint256"];
-            const responseValues = [status, kycTimestamp];
 
-            await this.oracle.fulfillOracleRequest2(
-                ...oracle.convertFulfill2Params(request, responseTypes, responseValues, {from: node}),
-            );
+            beforeEach(async function () {
+                await this.link.approve(this.consumer.address, oraclePayment, {from: revealer});
+                const requestTx = await this.consumer.requestStatus(revealee, {from: revealer});
+                this.request = oracle.decodeRunRequest(requestTx.receipt.rawLogs?.[4]);
+                this.requestId = await this.consumer.getLastRequestId({from: revealer});
 
-            const requestId = await this.consumer.getLastRequestId({from: revealer});
-            const fulfilledRequest = await this.consumer.getRequest(requestId, {from: revealer})
+                expectEvent(requestTx, "Requested", {
+                    _requestId: this.requestId,
+                    _revealer: revealer,
+                    _revealee: revealee,
+                })
+            });
 
-            console.log(fulfilledRequest)
-            // [
-            //     '1658845449',
-            //     '0xC5fdf4076b8F3A5357c5E395ab970B5B54098Fef',
-            //     '0x821aEa9a577a9b44299B9c15c88cf3087F3b5544',
-            //     '1',
-            //     kycTimestamp: '1658845449',
-            //     revealer: '0xC5fdf4076b8F3A5357c5E395ab970B5B54098Fef',
-            //     revealee: '0x821aEa9a577a9b44299B9c15c88cf3087F3b5544',
-            //     status: '1'
-            // ]
+            it("should not fulfill from unauthorized node", async function () {
+                await expectRevert(
+                    this.oracle.fulfillOracleRequest2(
+                        ...oracle.convertFulfill2Params(
+                            this.request,
+                            responseTypes,
+                            [kycUserStatus, nonZeroKycTimestamp],
+                            {from: node}
+                        ),
+                    ),
+                    "Not authorized sender"
+                );
+            });
+
+            describe("if node authorized", async function () {
+                beforeEach(async function () {
+                    await this.oracle.setAuthorizedSenders([node], {from: owner});
+
+                    this.doFulfill = async function (status, kycTimestamp) {
+                        return await this.oracle.fulfillOracleRequest2(
+                            ...oracle.convertFulfill2Params(
+                                this.request,
+                                responseTypes,
+                                [status, kycTimestamp],
+                                {from: node}
+                            ),
+                        );
+                    }
+
+                    this.expectFulfill = async function (status, kycTimestamp) {
+                        const tx = await this.doFulfill(status, kycTimestamp);
+
+                        await expectEvent.inTransaction(tx.receipt.transactionHash, this.consumer, "Fulfilled", {
+                            _requestId: this.requestId,
+                            _revealer: revealer,
+                            _revealee: revealee,
+                            _status: status,
+                            _kycTimestamp: kycTimestamp,
+                        });
+
+                        const fulfilledRequest = await this.consumer.getRequest(this.requestId, {from: revealer});
+
+                        expect(fulfilledRequest.status).to.be.equal(status);
+                        expect(fulfilledRequest.kycTimestamp).to.be.bignumber.equal(kycTimestamp);
+                    }
+
+                    this.expectNotFulfill = async function (status, kycTimestamp) {
+                        const tx = await this.doFulfill(status, kycTimestamp);
+
+                        await expectEvent.notEmitted.inTransaction(tx.receipt.transactionHash, this.consumer, "Fulfilled");
+
+                        const fulfilledRequest = await this.consumer.getRequest(this.requestId, {from: revealer});
+
+                        expect(fulfilledRequest.status).to.be.equal(undefinedStatus);
+                        expect(fulfilledRequest.kycTimestamp).to.be.bignumber.equal(zeroKycTimestamp);
+                    }
+                });
+
+                it("should fulfill kyc status with non-zero kyc timestamp", async function () {
+                    await this.expectFulfill(kycUserStatus, nonZeroKycTimestamp);
+                });
+
+                it("should not fulfill kyc status with zero kyc timestamp", async function () {
+                    await this.expectNotFulfill(kycUserStatus, zeroKycTimestamp);
+                });
+
+                it("should fulfill human unique status with zero kyc timestamp", async function () {
+                    await this.expectFulfill(humanUniqueStatus, zeroKycTimestamp);
+                });
+
+                it("should not fulfill human unique status with non-zero kyc timestamp", async function () {
+                    await this.expectNotFulfill(humanUniqueStatus, nonZeroKycTimestamp);
+                });
+
+                it("should fulfill not found status with zero kyc timestamp", async function () {
+                    await this.expectFulfill(notFoundStatus, zeroKycTimestamp);
+                });
+
+                it("should not fulfill not found status with non-zero kyc timestamp", async function () {
+                    await this.expectNotFulfill(notFoundStatus, nonZeroKycTimestamp);
+                });
+
+                it("should not fulfill undefined status with non-zero kyc timestamp", async function () {
+                    await this.expectNotFulfill(undefinedStatus, nonZeroKycTimestamp);
+                });
+
+                it("should not fulfill undefined status with zero kyc timestamp", async function () {
+                    await this.expectNotFulfill(undefinedStatus, zeroKycTimestamp);
+                });
+            });
         });
     });
 });
