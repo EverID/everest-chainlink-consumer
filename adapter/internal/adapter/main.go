@@ -81,6 +81,10 @@ func (a *unitExternalAdapter) safeUnpack(data []byte, address string) (model.Uni
 
 	a.logger.WithField("response", fmt.Sprintf("%+v", response)).Debug("got response")
 
+	if !response.Success {
+		return model.Unit{}, errors.New(response.Error)
+	}
+
 	if address != response.Unit.Address.String() {
 		return model.Unit{}, errors.New("wrong address")
 	}
