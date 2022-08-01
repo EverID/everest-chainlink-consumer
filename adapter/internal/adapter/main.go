@@ -7,7 +7,6 @@ import (
 
 	"adapter/internal/config"
 	"adapter/internal/model"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/linkpoolio/bridges"
 	"github.com/pkg/errors"
 	"gitlab.com/distributed_lab/logan/v3"
@@ -17,6 +16,7 @@ const (
 	adapterName   = "Unit External Adapter"
 	apiKeyHeader  = "X-Api-Key"
 	endpointParam = "address"
+	path          = "/everest-chainlink/status/%s"
 )
 
 func NewAdapter(cfg config.AdapterConfig, logger *logan.Entry) bridges.Bridge {
@@ -32,11 +32,13 @@ type unitExternalAdapter struct {
 }
 
 func (a *unitExternalAdapter) Run(h *bridges.Helper) (interface{}, error) {
-	a.logger.WithField("address", h.GetParam(endpointParam)).Info("got request")
+	address := h.GetParam(endpointParam)
+
+	a.logger.WithField("address", address).Info("got request")
 
 	data, err := h.HTTPCallRawWithOpts(
 		http.MethodGet,
-		fmt.Sprintf("%s/everest-chainlink/status/%s", a.cfg.ChainlinkServiceEndpoint, h.GetParam(endpointParam)),
+		a.cfg.ChainlinkServiceURL+fmt.Sprintf(path, address),
 		bridges.CallOpts{
 			Auth: bridges.NewAuth(bridges.AuthHeader, apiKeyHeader, a.cfg.ApiKey),
 		},
@@ -46,13 +48,13 @@ func (a *unitExternalAdapter) Run(h *bridges.Helper) (interface{}, error) {
 		return nil, errors.Wrap(err, "failed to make request")
 	}
 
-	unit, err := a.safeUnpack(data)
+	unit, err := a.safeUnpack(data, address)
 	if err != nil {
 		a.logger.WithError(err).Error("failed to safely unpack data")
 		return nil, errors.Wrap(err, "failed to safely unpack data")
 	}
 
-	a.logger.WithField("unit", unit).Info("got unit")
+	a.logger.WithField("unit", fmt.Sprintf("%+v", unit)).Info("got unit")
 
 	return map[string]interface{}{
 		"status": unit.Status,
@@ -71,7 +73,7 @@ func (a *unitExternalAdapter) Opts() *bridges.Opts {
 	}
 }
 
-func (a *unitExternalAdapter) safeUnpack(data []byte) (model.Unit, error) {
+func (a *unitExternalAdapter) safeUnpack(data []byte, address string) (model.Unit, error) {
 	var response model.Response
 	if err := json.Unmarshal(data, &response); err != nil {
 		return model.Unit{}, err
@@ -79,24 +81,34 @@ func (a *unitExternalAdapter) safeUnpack(data []byte) (model.Unit, error) {
 
 	a.logger.WithField("response", fmt.Sprintf("%+v", response)).Debug("got response")
 
-	zeroAddress := common.Address{}
-	if response.Unit.Address.String() == zeroAddress.String() {
-		return model.Unit{}, errors.New("zero address")
-	}
-
-	if response.Unit.CreationDate.Unix() == 0 && response.Unit.Status != model.NotFound {
-		return model.Unit{}, errors.New("wrong creation date")
+	if address != response.Unit.Address.String() {
+		return model.Unit{}, errors.New("wrong address")
 	}
 
 	switch response.Unit.Status {
 	case model.KYCUser:
 		if response.Unit.KYCDate.IsZero() {
-			return model.Unit{}, errors.New("kyc date for kyc users should not be zero")
+			return model.Unit{}, errors.New("kyc date for kyc user status should not be zero")
+		}
+		if response.Unit.CreationDate.IsZero() {
+			return model.Unit{}, errors.New("creation date for kyc user status should not be zero")
+		}
+	case model.NotFound:
+		if !response.Unit.KYCDate.IsZero() {
+			return model.Unit{}, errors.New("kyc date for not found status should be zero")
+		}
+		if !response.Unit.CreationDate.IsZero() {
+			return model.Unit{}, errors.New("creation date for not found status should be zero")
+		}
+	case model.HumanUnique:
+		if !response.Unit.KYCDate.IsZero() {
+			return model.Unit{}, errors.New("kyc date for human unique status should be zero")
+		}
+		if response.Unit.CreationDate.IsZero() {
+			return model.Unit{}, errors.New("creation date for human unique status should not be zero")
 		}
 	default:
-		if !response.Unit.KYCDate.IsZero() {
-			return model.Unit{}, errors.New("kyc date for non-kyc users should be zero")
-		}
+		return model.Unit{}, errors.New("unexpected status")
 	}
 
 	return response.Unit, nil
