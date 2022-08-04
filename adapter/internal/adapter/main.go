@@ -73,7 +73,7 @@ func (a *unitExternalAdapter) Opts() *bridges.Opts {
 	}
 }
 
-func (a *unitExternalAdapter) safeUnpack(data []byte, address string) (model.Unit, error) {
+func (a *unitExternalAdapter) safeUnpack(data []byte, _ string) (model.Unit, error) {
 	var response model.Response
 	if err := json.Unmarshal(data, &response); err != nil {
 		return model.Unit{}, err
@@ -83,10 +83,6 @@ func (a *unitExternalAdapter) safeUnpack(data []byte, address string) (model.Uni
 
 	if !response.Success {
 		return model.Unit{}, errors.New(response.Error)
-	}
-
-	if address != response.Unit.Address.String() {
-		return model.Unit{}, errors.New("wrong address")
 	}
 
 	switch response.Unit.Status {
