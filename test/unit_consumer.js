@@ -2,7 +2,7 @@ const UnitConsumer = artifacts.require("UnitConsumer");
 const Oracle = artifacts.require("Operator");
 const LinkToken = artifacts.require("LinkToken");
 
-const { constants, expectRevert, expectEvent } = require("@openzeppelin/test-helpers");
+const { constants, expectRevert, expectEvent, time } = require("@openzeppelin/test-helpers");
 const { expect } = require("chai");
 const { oracle, helpers } = require("@chainlink/test-helpers");
 
@@ -126,7 +126,7 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ra
         });
     });
 
-    describe("#requestStatus #fulfill", async function () {
+    describe("#requestStatus #fulfill #cancelRequest #getExpirationTimestamp", async function () {
         beforeEach(async function () {
             await this.link.transfer(revealer, oraclePayment, {from: owner});
         });
@@ -139,6 +139,8 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ra
         });
 
         describe("if approved", async function () {
+            const requestExpirationMinutes = 5;
+
             const undefinedStatus = "0";
             const kycUserStatus = "1";
             const humanUniqueStatus = "2";
@@ -154,12 +156,40 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ra
                 const requestTx = await this.consumer.requestStatus(revealee, {from: revealer});
                 this.request = oracle.decodeRunRequest(requestTx.receipt.rawLogs?.[4]);
                 this.requestId = await this.consumer.getLastRequestId({from: revealer});
+                this.requestTime = await time.latest();
 
                 expectEvent(requestTx, "Requested", {
                     _requestId: this.requestId,
                     _revealer: revealer,
                     _revealee: revealee,
                 });
+            });
+
+            it("expiration time should be 5 minutes after request", async function () {
+                const expectedExpirationTime = this.requestTime.add(time.duration.minutes(requestExpirationMinutes));
+                const expirationTime = await this.consumer.getExpirationTimestamp(this.requestId);
+                expect(expirationTime).to.be.bignumber.equal(expectedExpirationTime);
+            });
+
+            it("should not cancel if caller is not a revealer", async function () {
+                await expectRevert(
+                    this.consumer.cancelRequest(this.requestId, {from: stranger}),
+                    "You are not an owner of the request"
+                );
+            });
+
+            it("should not cancel if request is not expired", async function () {
+                await expectRevert(
+                    this.consumer.cancelRequest(this.requestId, {from: revealer}),
+                    "Request is not expired"
+                );
+            });
+
+            it("should not cancel after 5 minutes", async function () {
+                await time.increaseTo(await this.consumer.getExpirationTimestamp(this.requestId));
+                expect(await this.link.balanceOf(revealer)).to.be.bignumber.equal("0");
+                await this.consumer.cancelRequest(this.requestId, {from: revealer});
+                expect(await this.link.balanceOf(revealer)).to.be.bignumber.equal(oraclePayment);
             });
 
             it("should not fulfill from unauthorized node", async function () {
