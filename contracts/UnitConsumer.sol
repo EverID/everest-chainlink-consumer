@@ -5,10 +5,12 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract UnitConsumer is ChainlinkClient, Ownable {
     using Chainlink for Chainlink.Request;
+    using SafeERC20 for IERC20;
 
     enum Status {
         Undefined,
@@ -20,7 +22,7 @@ contract UnitConsumer is ChainlinkClient, Ownable {
     struct Request {
         // `kycTimestamp` is zero if the status is not `KYCUser`,
         // otherwise it is an epoch timestamp that represents the KYC date
-        uint kycTimestamp;
+        uint256 kycTimestamp;
         address revealer;
         address revealee;
         Status status;
@@ -28,8 +30,10 @@ contract UnitConsumer is ChainlinkClient, Ownable {
 
     mapping(address => bytes32) private _lastRequestId;
     mapping(bytes32 => Request) private _requests;
+    mapping(bytes32 => uint256) private _expirations;
+
     bytes32 public jobId;
-    uint public oraclePayment;
+    uint256 public oraclePayment;
 
     event Requested(
         bytes32 _requestId,
@@ -42,14 +46,19 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         address indexed _revealer,
         address indexed _revealee,
         Status _status,
-        uint _kycTimestamp
+        uint256 _kycTimestamp
     );
+
+    modifier ifRequestExists(bytes32 requestId) {
+        require(requestExists(requestId), "Request does not exist");
+        _;
+    }
 
     constructor(
         address _link,
         address _oracle,
         string memory _jobId,
-        uint _oraclePayment
+        uint256 _oraclePayment
     )
     {
         setChainlinkToken(_link);
@@ -58,17 +67,10 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         oraclePayment = _oraclePayment;
     }
 
-    function requestStatus(
-        address _revealee
-    )
-        external
-    {
+    function requestStatus(address _revealee) external {
         require(_revealee != address(0), "Revelaee should not be zero address");
 
-        try IERC20(chainlinkTokenAddress()).transferFrom(msg.sender, address(this), oraclePayment) returns (bool) {
-        } catch {
-            revert("Failed to transferFrom link token");
-        }
+        IERC20(chainlinkTokenAddress()).safeTransferFrom(msg.sender, address(this), oraclePayment);
 
         Chainlink.Request memory request = buildChainlinkRequest(
             jobId,
@@ -85,6 +87,7 @@ contract UnitConsumer is ChainlinkClient, Ownable {
             status: Status.Undefined
         });
         _lastRequestId[msg.sender] = requestId;
+        _expirations[requestId] = block.timestamp + 5 minutes;
 
         emit Requested(requestId, msg.sender, _revealee);
     }
@@ -92,7 +95,7 @@ contract UnitConsumer is ChainlinkClient, Ownable {
     function fulfill(
         bytes32 _requestId,
         Status _status,
-        uint _kycTimestamp
+        uint256 _kycTimestamp
     )
         external
         recordChainlinkFulfillment(_requestId)
@@ -107,6 +110,7 @@ contract UnitConsumer is ChainlinkClient, Ownable {
 
         _requests[_requestId].status = _status;
         _requests[_requestId].kycTimestamp = _kycTimestamp;
+        delete _expirations[_requestId];
 
         emit Fulfilled(
             _requestId,
@@ -117,16 +121,33 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         );
     }
 
+    function cancelRequest(bytes32 _requestId) external ifRequestExists(_requestId) {
+        require(_requests[_requestId].revealer == msg.sender, "You are not an owner of the request");
+        cancelChainlinkRequest(_requestId, oraclePayment, this.fulfill.selector, _expirations[_requestId]);
+        IERC20(chainlinkTokenAddress()).safeTransfer(msg.sender, oraclePayment);
+        delete _expirations[_requestId];
+    }
+
     function getRequest(
         bytes32 _requestId
     )
         external
         view
+        ifRequestExists(_requestId)
         returns (Request memory)
     {
-        require(requestExists(_requestId), "Request does not exist");
-
         return _requests[_requestId];
+    }
+
+    function getExpirationTimestamp(
+        bytes32 _requestId
+    )
+        external
+        view
+        ifRequestExists(_requestId)
+        returns (uint256)
+    {
+        return _expirations[_requestId];
     }
 
     function getLastRequestId() external view returns (bytes32) {
@@ -135,23 +156,11 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         return _lastRequestId[msg.sender];
     }
 
-    function requestExists(
-        bytes32 _requestId
-    )
-        public
-        view
-        returns (bool)
-    {
+    function requestExists(bytes32 _requestId) public view returns (bool) {
         return _requests[_requestId].revealer != address(0);
     }
 
-    function statusToString(
-        Status _status
-    )
-        external
-        pure
-        returns (string memory)
-    {
+    function statusToString(Status _status) external pure returns (string memory) {
         if (_status == Status.Undefined) {
             return "undefined";
         }
@@ -164,11 +173,6 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         return "not-found";
     }
 
-    function withdrawLink() external onlyOwner {
-        LinkTokenInterface link = LinkTokenInterface(chainlinkTokenAddress());
-        require(link.transfer(msg.sender, link.balanceOf(address(this))), "Unable to transfer");
-    }
-
     function setOracle(address _oracle) external onlyOwner {
         setChainlinkOracle(_oracle);
     }
@@ -177,7 +181,7 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         setChainlinkToken(_link);
     }
 
-    function setOraclePayment(uint _oraclePayment) external onlyOwner {
+    function setOraclePayment(uint256 _oraclePayment) external onlyOwner {
         oraclePayment = _oraclePayment;
     }
 

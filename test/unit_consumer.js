@@ -131,10 +131,10 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ra
             await this.link.transfer(revealer, oraclePayment, {from: owner});
         });
 
-        it("should revert if not enough allowance", async function () {
+        it.only("should revert if not enough allowance", async function () {
             await expectRevert(
                 this.consumer.requestStatus(revealee, {from: revealer}),
-                "Failed to transferFrom link token."
+                "SafeERC20: low-level "
             );
         });
 
