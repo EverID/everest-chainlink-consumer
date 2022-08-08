@@ -185,7 +185,7 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ra
                 );
             });
 
-            it("should not cancel after 5 minutes", async function () {
+            it("should cancel after 5 minutes", async function () {
                 await time.increaseTo(await this.consumer.getExpirationTimestamp(this.requestId));
                 expect(await this.link.balanceOf(revealer)).to.be.bignumber.equal("0");
                 await this.consumer.cancelRequest(this.requestId, {from: revealer});
