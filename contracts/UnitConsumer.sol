@@ -13,9 +13,13 @@ contract UnitConsumer is ChainlinkClient, Ownable {
     using SafeERC20 for IERC20;
 
     enum Status {
+        // Request is not fulfilled or an error occurred during job execution
         Undefined,
+        // KYSUser status
         KYCUser,
+        // Human & Unique status
         HumanUnique,
+        // Request is fulfilled and address is absent in the system
         NotFound
     }
 
