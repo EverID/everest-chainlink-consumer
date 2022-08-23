@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"adapter/internal/config"
-	"adapter/internal/model"
 	"github.com/linkpoolio/bridges"
 	"github.com/pkg/errors"
 	"gitlab.com/distributed_lab/logan/v3"
@@ -44,25 +43,52 @@ func (a *unitExternalAdapter) Run(h *bridges.Helper) (interface{}, error) {
 		},
 	)
 	if err != nil {
-		a.logger.WithError(err).Error("failed to make request")
-		return nil, errors.Wrap(err, "failed to make request")
+		errStr := "failed to make request"
+		a.logger.WithError(err).Error(errStr)
+		return nil, errors.Wrap(err, errStr)
+	}
+	a.logger.Debug("got response")
+
+	var response Response
+	if err = json.Unmarshal(data, &response); err != nil {
+		errStr := "failed to unmarshal response"
+		a.logger.WithError(err).Error(errStr)
+		return nil, errors.Wrap(err, errStr)
 	}
 
-	unit, err := a.safeUnpack(data, address)
-	if err != nil {
-		a.logger.WithError(err).Error("failed to safely unpack data")
-		return nil, errors.Wrap(err, "failed to safely unpack data")
-	}
+	logWithResponse := a.logger.WithField("response", fmt.Sprintf("%#v", response))
+	logWithResponse.Debug("bound response")
 
-	a.logger.WithField("unit", fmt.Sprintf("%+v", unit)).Info("got unit")
+	if !response.Success {
+		err := errors.New(response.Error)
+		errStr := "unsuccessful response"
+		a.logger.WithError(err).Error(errStr)
+		return nil, errors.Wrap(err, errStr)
+	}
+	logWithResponse.Debug("response is successful")
+
+	if err = response.KYCPayload.Validate(); err != nil {
+		errStr := "failed to validate"
+		a.logger.WithError(err).Error(errStr)
+		return nil, errors.Wrap(err, errStr)
+	}
+	logWithResponse.Debug("validated response")
 
 	return map[string]interface{}{
-		"status": unit.Status,
+		"status": func() Status {
+			if !response.KYCPayload.IsHumanAndUniqueUser {
+				return NotFound
+			}
+			if !response.KYCPayload.IsKYCUser {
+				return HumanUnique
+			}
+			return KYCUser
+		}(),
 		"kyc_timestamp": func() int64 {
-			if unit.KYCDate.IsZero() {
+			if response.KYCPayload.KYCDate == nil {
 				return 0
 			}
-			return unit.KYCDate.Unix()
+			return response.KYCPayload.KYCDate.Unix()
 		}(),
 	}, nil
 }
@@ -71,45 +97,4 @@ func (a *unitExternalAdapter) Opts() *bridges.Opts {
 	return &bridges.Opts{
 		Name: adapterName,
 	}
-}
-
-func (a *unitExternalAdapter) safeUnpack(data []byte, _ string) (model.Unit, error) {
-	var response model.Response
-	if err := json.Unmarshal(data, &response); err != nil {
-		return model.Unit{}, err
-	}
-
-	a.logger.WithField("response", fmt.Sprintf("%+v", response)).Debug("got response")
-
-	if !response.Success {
-		return model.Unit{}, errors.New(response.Error)
-	}
-
-	switch response.Unit.Status {
-	case model.KYCUser:
-		if response.Unit.KYCDate.IsZero() {
-			return model.Unit{}, errors.New("kyc date for kyc user status should not be zero")
-		}
-		if response.Unit.CreationDate.IsZero() {
-			return model.Unit{}, errors.New("creation date for kyc user status should not be zero")
-		}
-	case model.NotFound:
-		if !response.Unit.KYCDate.IsZero() {
-			return model.Unit{}, errors.New("kyc date for not found status should be zero")
-		}
-		if !response.Unit.CreationDate.IsZero() {
-			return model.Unit{}, errors.New("creation date for not found status should be zero")
-		}
-	case model.HumanUnique:
-		if !response.Unit.KYCDate.IsZero() {
-			return model.Unit{}, errors.New("kyc date for human unique status should be zero")
-		}
-		if response.Unit.CreationDate.IsZero() {
-			return model.Unit{}, errors.New("creation date for human unique status should not be zero")
-		}
-	default:
-		return model.Unit{}, errors.New("unexpected status")
-	}
-
-	return response.Unit, nil
 }

@@ -9,7 +9,7 @@ const { oracle, helpers } = require("@chainlink/test-helpers");
 contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, randomAddress]) {
     const jobId = "509e8dd8de054d3f918640ab0a2b77d8";
     const oraclePayment = "1000000000000000000"; // 10 ** 18
-
+    const defaultSignUpURL = "https://everest.org"
     beforeEach(async function () {
         this.link = await LinkToken.new({from: owner});
         this.oracle = await Oracle.new(this.link.address, owner, {from: owner});
@@ -18,6 +18,7 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ra
             this.oracle.address,
             jobId,
             oraclePayment,
+            defaultSignUpURL,
             {from: owner}
         );
     });
@@ -30,6 +31,7 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ra
         expect(await this.consumer.jobId()).to.be.equal(web3.utils.asciiToHex(jobId));
         expect(await this.consumer.oraclePayment()).to.be.bignumber.equal(oraclePayment);
         expect(await this.consumer.linkAddress()).to.be.equal(this.link.address);
+        expect(await this.consumer.signUpURL()).to.be.equal(defaultSignUpURL);
     });
 
     describe("#setOracle", async function () {
@@ -69,6 +71,21 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ra
         it("should revert if sender is not an owner", async function () {
             await expectRevert(
                 this.consumer.setLink(randomAddress, {from: stranger}),
+                "Ownable: caller is not the owner"
+            );
+        });
+    });
+
+    describe("#setSignUpURL", async function () {
+        const url = "https://everest.sign.up.mocked.org/";
+        it("should set properly with owner sender", async function () {
+            await this.consumer.setSignUpURL(url, {from: owner});
+            expect(await this.consumer.signUpURL()).to.be.equal(url);
+        });
+
+        it("should revert if sender is not an owner", async function () {
+            await expectRevert(
+                this.consumer.setSignUpURL(url, {from: stranger}),
                 "Ownable: caller is not the owner"
             );
         });

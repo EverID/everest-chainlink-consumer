@@ -36,6 +36,7 @@ contract UnitConsumer is ChainlinkClient, Ownable {
     mapping(bytes32 => Request) private _requests;
     mapping(bytes32 => uint256) private _expirations;
 
+    string public signUpURL;
     bytes32 public jobId;
     uint256 public oraclePayment;
 
@@ -62,13 +63,15 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         address _link,
         address _oracle,
         string memory _jobId,
-        uint256 _oraclePayment
+        uint256 _oraclePayment,
+        string memory _signUpURL
     )
     {
         setChainlinkToken(_link);
         setChainlinkOracle(_oracle);
         jobId = stringToBytes32(_jobId);
         oraclePayment = _oraclePayment;
+        signUpURL = _signUpURL;
     }
 
     function requestStatus(address _revealee) external {
@@ -154,6 +157,10 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         return _expirations[_requestId];
     }
 
+    function setSignUpURL(string memory _signUpURL) external onlyOwner {
+        signUpURL = _signUpURL;
+    }
+
     function getLastRequestId() external view returns (bytes32) {
         require(_lastRequestId[msg.sender] != 0, "No requests yet");
 
@@ -165,16 +172,16 @@ contract UnitConsumer is ChainlinkClient, Ownable {
     }
 
     function statusToString(Status _status) external pure returns (string memory) {
-        if (_status == Status.Undefined) {
-            return "undefined";
-        }
         if (_status == Status.KYCUser) {
-            return "kyc-user";
+            return "KYC_USER";
         }
         if (_status == Status.HumanUnique) {
-            return "human-unique";
+            return "HUMAN_AND_UNIQUE";
         }
-        return "not-found";
+        if (_status == Status.NotFound) {
+            return "NOT_FOUND";
+        }
+        return "UNDEFINED";
     }
 
     function setOracle(address _oracle) external onlyOwner {

@@ -12,7 +12,7 @@ require (
 	gitlab.com/tokend/keypair v0.0.0-20190412110653-b9d7e0c8b312
 )
 
-require github.com/ethereum/go-ethereum v1.10.20
+require github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 
 require (
 	github.com/BurntSushi/toml v1.1.0 // indirect
@@ -31,6 +31,7 @@ require (
 	github.com/spf13/cast v1.3.0 // indirect
 	github.com/spf13/jwalterweatherman v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.3 // indirect
+	github.com/stretchr/testify v1.7.2 // indirect
 	github.com/tidwall/gjson v1.6.1 // indirect
 	github.com/tidwall/match v1.0.1 // indirect
 	github.com/tidwall/pretty v1.0.2 // indirect
@@ -38,6 +39,7 @@ require (
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
 	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
 	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/xerrors v0.0.0-20220517211312-f3a8303e98df // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/guregu/null.v3 v3.4.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

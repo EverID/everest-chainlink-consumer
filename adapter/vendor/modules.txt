@@ -6,16 +6,15 @@ github.com/aws/aws-lambda-go/lambda
 github.com/aws/aws-lambda-go/lambda/handlertrace
 github.com/aws/aws-lambda-go/lambda/messages
 github.com/aws/aws-lambda-go/lambdacontext
-# github.com/ethereum/go-ethereum v1.10.20
-## explicit; go 1.17
-github.com/ethereum/go-ethereum/common
-github.com/ethereum/go-ethereum/common/hexutil
 # github.com/fsnotify/fsnotify v1.5.4
 ## explicit; go 1.16
 github.com/fsnotify/fsnotify
 # github.com/getsentry/sentry-go v0.7.0
 ## explicit; go 1.12
 github.com/getsentry/sentry-go
+# github.com/go-ozzo/ozzo-validation/v4 v4.3.0
+## explicit; go 1.13
+github.com/go-ozzo/ozzo-validation/v4
 # github.com/google/go-cmp v0.5.5
 ## explicit; go 1.8
 # github.com/hashicorp/hcl v1.0.0
@@ -69,6 +68,8 @@ github.com/spf13/pflag
 # github.com/spf13/viper v1.3.2
 ## explicit
 github.com/spf13/viper
+# github.com/stretchr/testify v1.7.2
+## explicit; go 1.13
 # github.com/tidwall/gjson v1.6.1
 ## explicit; go 1.12
 github.com/tidwall/gjson
@@ -104,16 +105,16 @@ gitlab.com/tokend/keypair/internal/strkey
 ## explicit; go 1.17
 golang.org/x/crypto/ed25519
 golang.org/x/crypto/ed25519/internal/edwards25519
-golang.org/x/crypto/sha3
 # golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a
 ## explicit; go 1.17
-golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 # golang.org/x/text v0.3.7
 ## explicit; go 1.17
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
+# golang.org/x/xerrors v0.0.0-20220517211312-f3a8303e98df
+## explicit; go 1.17
 # gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
 ## explicit; go 1.11
 # gopkg.in/guregu/null.v3 v3.4.0
