@@ -9,9 +9,9 @@ import (
 type Status int64
 
 const (
-	KYCUser Status = iota + 1
+	NotFound Status = iota
+	KYCUser
 	HumanUnique
-	NotFound
 )
 
 func (s Status) String() string {
