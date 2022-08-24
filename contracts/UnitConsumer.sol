@@ -13,12 +13,12 @@ contract UnitConsumer is ChainlinkClient, Ownable {
     using SafeERC20 for IERC20;
 
     enum Status {
-        // KYSUser status
+        // Address does not exist
+        NotFound,
+        // KYC User status
         KYCUser,
         // Human & Unique status
-        HumanUnique,
-        // Request is fulfilled and address is absent in the system
-        NotFound
+        HumanAndUnique
     }
 
     struct Request {
@@ -181,7 +181,7 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         if (_status == Status.KYCUser) {
             return "KYC_USER";
         }
-        if (_status == Status.HumanUnique) {
+        if (_status == Status.HumanAndUnique) {
             return "HUMAN_AND_UNIQUE";
         }
         return "NOT_FOUND";
