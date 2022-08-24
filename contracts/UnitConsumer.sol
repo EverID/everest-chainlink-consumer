@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity ^0.8.9;
 
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -13,8 +13,6 @@ contract UnitConsumer is ChainlinkClient, Ownable {
     using SafeERC20 for IERC20;
 
     enum Status {
-        // Request is not fulfilled or an error occurred during job execution
-        Undefined,
         // KYSUser status
         KYCUser,
         // Human & Unique status
@@ -24,17 +22,28 @@ contract UnitConsumer is ChainlinkClient, Ownable {
     }
 
     struct Request {
+        bool isFulfilled;
+        bool isCanceled;
+
+        bool isHumanAndUnique;
+        bool isKYCUser;
+
+        address revealer;
+        address revealee;
+
         // `kycTimestamp` is zero if the status is not `KYCUser`,
         // otherwise it is an epoch timestamp that represents the KYC date
         uint256 kycTimestamp;
-        address revealer;
-        address revealee;
-        Status status;
+
+        // expiration = block.timestamp while `requestStatus` + 5 minutes.
+        // If `isFulfilled` and `isCanceled` are false by this time -
+        // the the owner of the request can cancel its
+        // request using `cancelRequest` and return paid link tokens
+        uint256 expiration;
     }
 
     mapping(address => bytes32) private _lastRequestId;
     mapping(bytes32 => Request) private _requests;
-    mapping(bytes32 => uint256) private _expirations;
 
     string public signUpURL;
     bytes32 public jobId;
@@ -43,7 +52,8 @@ contract UnitConsumer is ChainlinkClient, Ownable {
     event Requested(
         bytes32 _requestId,
         address indexed _revealer,
-        address indexed _revealee
+        address indexed _revealee,
+        uint256 _expiration
     );
 
     event Fulfilled(
@@ -87,16 +97,21 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         request.add("address", Strings.toHexString(_revealee));
 
         bytes32 requestId = sendChainlinkRequest(request, oraclePayment);
+
+        uint256 expiration = block.timestamp + 5 minutes;
         _requests[requestId] = Request({
-            kycTimestamp: 0,
+            isFulfilled: false,
+            isCanceled: false,
+            isHumanAndUnique: false,
+            isKYCUser: false,
             revealer: msg.sender,
             revealee: _revealee,
-            status: Status.Undefined
+            kycTimestamp: 0,
+            expiration: expiration
         });
         _lastRequestId[msg.sender] = requestId;
-        _expirations[requestId] = block.timestamp + 5 minutes;
 
-        emit Requested(requestId, msg.sender, _revealee);
+        emit Requested(requestId, msg.sender, _revealee, expiration);
     }
 
     function fulfill(
@@ -107,17 +122,17 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         external
         recordChainlinkFulfillment(_requestId)
     {
-        require(_status != Status.Undefined, "Status should not be Undefined");
-
         if (_status == Status.KYCUser) {
             require(_kycTimestamp != 0, "_kycTimestamp should not be zero for KYCUser");
         } else {
             require(_kycTimestamp == 0, "_kycTimestamp should be zero for non-KYCUser");
         }
 
-        _requests[_requestId].status = _status;
-        _requests[_requestId].kycTimestamp = _kycTimestamp;
-        delete _expirations[_requestId];
+        Request storage request = _requests[_requestId];
+        request.kycTimestamp = _kycTimestamp;
+        request.isFulfilled = true;
+        request.isHumanAndUnique = _status != Status.NotFound;
+        request.isKYCUser = _status == Status.KYCUser;
 
         emit Fulfilled(
             _requestId,
@@ -129,10 +144,12 @@ contract UnitConsumer is ChainlinkClient, Ownable {
     }
 
     function cancelRequest(bytes32 _requestId) external ifRequestExists(_requestId) {
-        require(_requests[_requestId].revealer == msg.sender, "You are not an owner of the request");
-        cancelChainlinkRequest(_requestId, oraclePayment, this.fulfill.selector, _expirations[_requestId]);
+        Request storage request = _requests[_requestId];
+        require(!request.isCanceled && !request.isFulfilled, "Request should not be canceled or fulfilled");
+        require(request.revealer == msg.sender, "You are not an owner of the request");
+        cancelChainlinkRequest(_requestId, oraclePayment, this.fulfill.selector, request.expiration);
         IERC20(chainlinkTokenAddress()).safeTransfer(msg.sender, oraclePayment);
-        delete _expirations[_requestId];
+        request.isCanceled = true;
     }
 
     function getRequest(
@@ -144,17 +161,6 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         returns (Request memory)
     {
         return _requests[_requestId];
-    }
-
-    function getExpirationTimestamp(
-        bytes32 _requestId
-    )
-        external
-        view
-        ifRequestExists(_requestId)
-        returns (uint256)
-    {
-        return _expirations[_requestId];
     }
 
     function setSignUpURL(string memory _signUpURL) external onlyOwner {
@@ -178,10 +184,7 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         if (_status == Status.HumanUnique) {
             return "HUMAN_AND_UNIQUE";
         }
-        if (_status == Status.NotFound) {
-            return "NOT_FOUND";
-        }
-        return "UNDEFINED";
+        return "NOT_FOUND";
     }
 
     function setOracle(address _oracle) external onlyOwner {
