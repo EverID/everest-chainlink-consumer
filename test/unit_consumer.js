@@ -2,7 +2,7 @@ const UnitConsumer = artifacts.require("UnitConsumer");
 const Oracle = artifacts.require("Operator");
 const LinkToken = artifacts.require("LinkToken");
 
-const { constants, expectRevert, expectEvent, time, BN } = require("@openzeppelin/test-helpers");
+const { constants, expectRevert, expectEvent, time } = require("@openzeppelin/test-helpers");
 const { expect } = require("chai");
 const { oracle, helpers } = require("@chainlink/test-helpers");
 
@@ -184,7 +184,7 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ra
 
             it("expiration time should be 5 minutes after request", async function () {
                 const expirationTime = (await this.consumer.getRequest(this.requestId)).expiration;
-                expect(new BN(expirationTime)).to.be.bignumber.equal(this.expiration);
+                expect(expirationTime).to.be.bignumber.equal(this.expiration);
             });
 
             it("should not cancel if caller is not a revealer", async function () {
