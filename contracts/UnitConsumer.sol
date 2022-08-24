@@ -136,8 +136,8 @@ contract UnitConsumer is ChainlinkClient, Ownable {
 
         emit Fulfilled(
             _requestId,
-            _requests[_requestId].revealer,
-            _requests[_requestId].revealee,
+            request.revealer,
+            request.revealee,
             _status,
             _kycTimestamp
         );
