@@ -2,7 +2,7 @@ const UnitConsumer = artifacts.require("UnitConsumer");
 const Oracle = artifacts.require("Operator");
 const LinkToken = artifacts.require("LinkToken");
 
-const { constants, expectRevert, expectEvent, time } = require("@openzeppelin/test-helpers");
+const { constants, expectRevert, expectEvent, time, BN } = require("@openzeppelin/test-helpers");
 const { expect } = require("chai");
 const { oracle, helpers } = require("@chainlink/test-helpers");
 
@@ -117,10 +117,9 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ra
 
     describe("#statusToString", async function () {
         it("should return correct names", async function () {
-            expect(await this.consumer.statusToString(0)).to.be.equal("undefined");
-            expect(await this.consumer.statusToString(1)).to.be.equal("kyc-user");
-            expect(await this.consumer.statusToString(2)).to.be.equal("human-unique");
-            expect(await this.consumer.statusToString(3)).to.be.equal("not-found");
+            expect(await this.consumer.statusToString(0)).to.be.equal("NOT_FOUND");
+            expect(await this.consumer.statusToString(1)).to.be.equal("KYC_USER");
+            expect(await this.consumer.statusToString(2)).to.be.equal("HUMAN_AND_UNIQUE");
         });
     });
 
@@ -143,7 +142,7 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ra
         });
     });
 
-    describe("#requestStatus #fulfill #cancelRequest #getExpirationTimestamp", async function () {
+    describe("#requestStatus #fulfill #cancelRequest", async function () {
         beforeEach(async function () {
             await this.link.transfer(revealer, oraclePayment, {from: owner});
         });
@@ -158,10 +157,9 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ra
         describe("if approved", async function () {
             const requestExpirationMinutes = 5;
 
-            const undefinedStatus = "0";
+            const notFoundStatus = "0";
             const kycUserStatus = "1";
             const humanUniqueStatus = "2";
-            const notFoundStatus = "3";
 
             const nonZeroKycTimestamp = "1658845449";
             const zeroKycTimestamp = "0";
@@ -174,18 +172,19 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ra
                 this.request = oracle.decodeRunRequest(requestTx.receipt.rawLogs?.[4]);
                 this.requestId = await this.consumer.getLastRequestId({from: revealer});
                 this.requestTime = await time.latest();
+                this.expiration = this.requestTime.add(time.duration.minutes(requestExpirationMinutes));
 
                 expectEvent(requestTx, "Requested", {
                     _requestId: this.requestId,
                     _revealer: revealer,
                     _revealee: revealee,
+                    _expiration: this.expiration,
                 });
             });
 
             it("expiration time should be 5 minutes after request", async function () {
-                const expectedExpirationTime = this.requestTime.add(time.duration.minutes(requestExpirationMinutes));
-                const expirationTime = await this.consumer.getExpirationTimestamp(this.requestId);
-                expect(expirationTime).to.be.bignumber.equal(expectedExpirationTime);
+                const expirationTime = (await this.consumer.getRequest(this.requestId)).expiration;
+                expect(new BN(expirationTime)).to.be.bignumber.equal(this.expiration);
             });
 
             it("should not cancel if caller is not a revealer", async function () {
@@ -203,10 +202,12 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ra
             });
 
             it("should cancel after 5 minutes", async function () {
-                await time.increaseTo(await this.consumer.getExpirationTimestamp(this.requestId));
+                await time.increaseTo(this.expiration);
                 expect(await this.link.balanceOf(revealer)).to.be.bignumber.equal("0");
+                expect(await (await this.consumer.getRequest(this.requestId)).isCanceled).to.be.false;
                 await this.consumer.cancelRequest(this.requestId, {from: revealer});
                 expect(await this.link.balanceOf(revealer)).to.be.bignumber.equal(oraclePayment);
+                expect(await (await this.consumer.getRequest(this.requestId)).isCanceled).to.be.true;
             });
 
             it("should not fulfill from unauthorized node", async function () {
@@ -251,8 +252,28 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ra
 
                         const fulfilledRequest = await this.consumer.getRequest(this.requestId, {from: revealer});
 
-                        expect(fulfilledRequest.status).to.be.equal(status);
-                        expect(fulfilledRequest.kycTimestamp).to.be.bignumber.equal(kycTimestamp);
+                        expect(fulfilledRequest.isCanceled).to.be.false;
+                        expect(fulfilledRequest.isFulfilled).to.be.true;
+
+                        switch (status) {
+                            case kycUserStatus:
+                                expect(fulfilledRequest.isHumanAndUnique).to.be.true;
+                                expect(fulfilledRequest.isKYCUser).to.be.true;
+                                expect(fulfilledRequest.kycTimestamp).to.be.bignumber.equal(kycTimestamp);
+                                break;
+                            case humanUniqueStatus:
+                                expect(fulfilledRequest.isHumanAndUnique).to.be.true;
+                                expect(fulfilledRequest.isKYCUser).to.be.false;
+                                expect(fulfilledRequest.kycTimestamp).to.be.bignumber.equal(kycTimestamp);
+                                break;
+                            case notFoundStatus:
+                                expect(fulfilledRequest.isHumanAndUnique).to.be.false;
+                                expect(fulfilledRequest.isKYCUser).to.be.false;
+                                expect(fulfilledRequest.kycTimestamp).to.be.bignumber.equal(kycTimestamp);
+                                break;
+                            default:
+                                break;
+                        }
                     }
 
                     this.expectNotFulfill = async function (status, kycTimestamp) {
@@ -262,8 +283,11 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ra
 
                         const fulfilledRequest = await this.consumer.getRequest(this.requestId, {from: revealer});
 
-                        expect(fulfilledRequest.status).to.be.equal(undefinedStatus);
-                        expect(fulfilledRequest.kycTimestamp).to.be.bignumber.equal(zeroKycTimestamp);
+                        expect(fulfilledRequest.isCanceled).to.be.false;
+                        expect(fulfilledRequest.isFulfilled).to.be.false;
+                        expect(fulfilledRequest.isHumanAndUnique).to.be.false;
+                        expect(fulfilledRequest.isKYCUser).to.be.false;
+                        expect(fulfilledRequest.kycTimestamp).to.be.bignumber.equal("0");
                     }
                 });
 
@@ -289,14 +313,6 @@ contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, ra
 
                 it("should not fulfill not found status with non-zero kyc timestamp", async function () {
                     await this.expectNotFulfill(notFoundStatus, nonZeroKycTimestamp);
-                });
-
-                it("should not fulfill undefined status with non-zero kyc timestamp", async function () {
-                    await this.expectNotFulfill(undefinedStatus, nonZeroKycTimestamp);
-                });
-
-                it("should not fulfill undefined status with zero kyc timestamp", async function () {
-                    await this.expectNotFulfill(undefinedStatus, zeroKycTimestamp);
                 });
             });
         });
