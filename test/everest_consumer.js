@@ -1,4 +1,4 @@
-const UnitConsumer = artifacts.require("UnitConsumer");
+const EverestConsumer = artifacts.require("EverestConsumer");
 const Oracle = artifacts.require("Operator");
 const LinkToken = artifacts.require("LinkToken");
 
@@ -6,14 +6,14 @@ const { constants, expectRevert, expectEvent, time } = require("@openzeppelin/te
 const { expect } = require("chai");
 const { oracle, helpers } = require("@chainlink/test-helpers");
 
-contract("UnitConsumer", function([owner, stranger, revealer, revealee, node, randomAddress]) {
+contract("EverestConsumer", function([owner, stranger, revealer, revealee, node, randomAddress]) {
     const jobId = "509e8dd8de054d3f918640ab0a2b77d8";
     const oraclePayment = "1000000000000000000"; // 10 ** 18
     const defaultSignUpURL = "https://everest.org"
     beforeEach(async function () {
         this.link = await LinkToken.new({from: owner});
         this.oracle = await Oracle.new(this.link.address, owner, {from: owner});
-        this.consumer = await UnitConsumer.new(
+        this.consumer = await EverestConsumer.new(
             this.link.address,
             this.oracle.address,
             jobId,
