@@ -4,11 +4,10 @@ pragma solidity ^0.8.9;
 
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract UnitConsumer is ChainlinkClient, Ownable {
+contract EverestConsumer is ChainlinkClient, Ownable {
     using Chainlink for Chainlink.Request;
     using SafeERC20 for IERC20;
 
@@ -22,26 +21,23 @@ contract UnitConsumer is ChainlinkClient, Ownable {
     }
 
     struct Request {
-        bool isFulfilled;
-        bool isCanceled;
-
-        bool isHumanAndUnique;
-        bool isKYCUser;
-
-        address revealer;
-        address revealee;
-
+        bool isFulfilled; // 1 byte - slot 0
+        bool isCanceled; // 1 byte - slot 0
+        bool isHumanAndUnique; // 1 byte - slot 0
+        bool isKYCUser; // 1 byte - slot 0
+        address revealer; // 20 bytes - slot 0
+        address revealee; // 20 bytes - slot 1
         // `kycTimestamp` is zero if the status is not `KYCUser`,
         // otherwise it is an epoch timestamp that represents the KYC date
-        uint256 kycTimestamp;
-
+        uint40 kycTimestamp; // 5 bytes - slot 1
         // expiration = block.timestamp while `requestStatus` + 5 minutes.
         // If `isFulfilled` and `isCanceled` are false by this time -
         // the the owner of the request can cancel its
         // request using `cancelRequest` and return paid link tokens
-        uint256 expiration;
+        uint40 expiration; // 5 bytes - slot 1
     }
 
+    uint40 private constant OPERATOR_EXPIRATION_TIME = 5 minutes;
     mapping(address => bytes32) private _lastRequestId;
     mapping(bytes32 => Request) private _requests;
 
@@ -53,7 +49,7 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         bytes32 _requestId,
         address indexed _revealer,
         address indexed _revealee,
-        uint256 _expiration
+        uint40 _expiration
     );
 
     event Fulfilled(
@@ -61,7 +57,7 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         address indexed _revealer,
         address indexed _revealee,
         Status _status,
-        uint256 _kycTimestamp
+        uint40 _kycTimestamp
     );
 
     modifier ifRequestExists(bytes32 requestId) {
@@ -75,8 +71,7 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         string memory _jobId,
         uint256 _oraclePayment,
         string memory _signUpURL
-    )
-    {
+    ) {
         setChainlinkToken(_link);
         setChainlinkOracle(_oracle);
         jobId = stringToBytes32(_jobId);
@@ -87,18 +82,21 @@ contract UnitConsumer is ChainlinkClient, Ownable {
     function requestStatus(address _revealee) external {
         require(_revealee != address(0), "Revelaee should not be zero address");
 
-        IERC20(chainlinkTokenAddress()).safeTransferFrom(msg.sender, address(this), oraclePayment);
-
-        Chainlink.Request memory request = buildChainlinkRequest(
-            jobId,
+        IERC20(chainlinkTokenAddress()).safeTransferFrom(
+            msg.sender,
             address(this),
+            oraclePayment
+        );
+
+        Chainlink.Request memory request = buildOperatorRequest(
+            jobId,
             this.fulfill.selector
         );
-        request.add("address", Strings.toHexString(_revealee));
+        request.addBytes("address", abi.encode(_revealee));
 
-        bytes32 requestId = sendChainlinkRequest(request, oraclePayment);
+        bytes32 requestId = sendOperatorRequest(request, oraclePayment);
 
-        uint256 expiration = block.timestamp + 5 minutes;
+        uint40 expiration = uint40(block.timestamp) + OPERATOR_EXPIRATION_TIME;
         _requests[requestId] = Request({
             isFulfilled: false,
             isCanceled: false,
@@ -117,15 +115,18 @@ contract UnitConsumer is ChainlinkClient, Ownable {
     function fulfill(
         bytes32 _requestId,
         Status _status,
-        uint256 _kycTimestamp
-    )
-        external
-        recordChainlinkFulfillment(_requestId)
-    {
+        uint40 _kycTimestamp
+    ) external recordChainlinkFulfillment(_requestId) {
         if (_status == Status.KYCUser) {
-            require(_kycTimestamp != 0, "_kycTimestamp should not be zero for KYCUser");
+            require(
+                _kycTimestamp != 0,
+                "_kycTimestamp should not be zero for KYCUser"
+            );
         } else {
-            require(_kycTimestamp == 0, "_kycTimestamp should be zero for non-KYCUser");
+            require(
+                _kycTimestamp == 0,
+                "_kycTimestamp should be zero for non-KYCUser"
+            );
         }
 
         Request storage request = _requests[_requestId];
@@ -143,18 +144,30 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         );
     }
 
-    function cancelRequest(bytes32 _requestId) external ifRequestExists(_requestId) {
+    function cancelRequest(bytes32 _requestId)
+        external
+        ifRequestExists(_requestId)
+    {
         Request storage request = _requests[_requestId];
-        require(!request.isCanceled && !request.isFulfilled, "Request should not be canceled or fulfilled");
-        require(request.revealer == msg.sender, "You are not an owner of the request");
-        cancelChainlinkRequest(_requestId, oraclePayment, this.fulfill.selector, request.expiration);
+        require(
+            !request.isCanceled && !request.isFulfilled,
+            "Request should not be canceled or fulfilled"
+        );
+        require(
+            request.revealer == msg.sender,
+            "You are not an owner of the request"
+        );
+        cancelChainlinkRequest(
+            _requestId,
+            oraclePayment,
+            this.fulfill.selector,
+            request.expiration
+        );
         IERC20(chainlinkTokenAddress()).safeTransfer(msg.sender, oraclePayment);
         request.isCanceled = true;
     }
 
-    function getRequest(
-        bytes32 _requestId
-    )
+    function getRequest(bytes32 _requestId)
         external
         view
         ifRequestExists(_requestId)
@@ -177,7 +190,11 @@ contract UnitConsumer is ChainlinkClient, Ownable {
         return _requests[_requestId].revealer != address(0);
     }
 
-    function statusToString(Status _status) external pure returns (string memory) {
+    function statusToString(Status _status)
+        external
+        pure
+        returns (string memory)
+    {
         if (_status == Status.KYCUser) {
             return "KYC_USER";
         }
