@@ -39,6 +39,7 @@ contract EverestConsumer is ChainlinkClient, Ownable {
 
     uint40 private constant OPERATOR_EXPIRATION_TIME = 5 minutes;
     mapping(address => bytes32) private _lastRequestId;
+    mapping(address => bytes32) private _lastStatus;
     mapping(bytes32 => Request) private _requests;
 
     string public signUpURL;
@@ -134,6 +135,7 @@ contract EverestConsumer is ChainlinkClient, Ownable {
         request.isFulfilled = true;
         request.isHumanAndUnique = _status != Status.NotFound;
         request.isKYCUser = _status == Status.KYCUser;
+        _lastStatus[request.revealee] = _requestId;
 
         emit Fulfilled(
             _requestId,
@@ -168,12 +170,21 @@ contract EverestConsumer is ChainlinkClient, Ownable {
     }
 
     function getRequest(bytes32 _requestId)
-        external
+        public
         view
         ifRequestExists(_requestId)
         returns (Request memory)
     {
         return _requests[_requestId];
+    }
+
+    function getLastStatus(address _revealee)
+        external
+        view
+        returns
+        (Request memory)
+    {
+        return getRequest(_lastStatus[_revealee]);
     }
 
     function setSignUpURL(string memory _signUpURL) external onlyOwner {
