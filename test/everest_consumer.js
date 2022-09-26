@@ -123,9 +123,9 @@ contract("EverestConsumer", function([owner, stranger, revealer, revealee, node,
         });
     });
 
-    describe("#getLastRequestId", async function () {
+    describe("#getLatestSentRequestId", async function () {
         it("should revert if no requests yet", async function () {
-            await expectRevert(this.consumer.getLastRequestId(), "No requests yet");
+            await expectRevert(this.consumer.getLatestSentRequestId(), "No requests yet");
         })
     });
 
@@ -170,7 +170,7 @@ contract("EverestConsumer", function([owner, stranger, revealer, revealee, node,
                 await this.link.approve(this.consumer.address, oraclePayment, {from: revealer});
                 const requestTx = await this.consumer.requestStatus(revealee, {from: revealer});
                 this.request = oracle.decodeRunRequest(requestTx.receipt.rawLogs?.[4]);
-                this.requestId = await this.consumer.getLastRequestId({from: revealer});
+                this.requestId = await this.consumer.getLatestSentRequestId({from: revealer});
                 this.requestTime = await time.latest();
                 this.expiration = this.requestTime.add(time.duration.minutes(requestExpirationMinutes));
 
