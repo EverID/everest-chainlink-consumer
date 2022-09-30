@@ -40,10 +40,10 @@ contract EverestConsumer is ChainlinkClient, Ownable {
     uint40 private constant OPERATOR_EXPIRATION_TIME = 5 minutes;
 
     // latest sent request id by revealer address
-    mapping(address => bytes32) private _latestSentRequestId;
+    mapping(address => bytes32) public latestSentRequestId;
 
     // latest fulfilled request id by revealee address
-    mapping(address => bytes32) private _latestFulfilledRequestId;
+    mapping(address => bytes32) public latestFulfilledRequestId;
 
     mapping(bytes32 => Request) private _requests;
 
@@ -113,7 +113,7 @@ contract EverestConsumer is ChainlinkClient, Ownable {
             kycTimestamp: 0,
             expiration: expiration
         });
-        _latestSentRequestId[msg.sender] = requestId;
+        latestSentRequestId[msg.sender] = requestId;
 
         emit Requested(requestId, msg.sender, _revealee, expiration);
     }
@@ -140,7 +140,7 @@ contract EverestConsumer is ChainlinkClient, Ownable {
         request.isFulfilled = true;
         request.isHumanAndUnique = _status != Status.NotFound;
         request.isKYCUser = _status == Status.KYCUser;
-        _latestFulfilledRequestId[request.revealee] = _requestId;
+        latestFulfilledRequestId[request.revealee] = _requestId;
 
         emit Fulfilled(
             _requestId,
@@ -189,7 +189,7 @@ contract EverestConsumer is ChainlinkClient, Ownable {
         returns
         (Request memory)
     {
-        return getRequest(_latestFulfilledRequestId[_revealee]);
+        return getRequest(latestFulfilledRequestId[_revealee]);
     }
 
     function setSignUpURL(string memory _signUpURL) external onlyOwner {
@@ -197,9 +197,9 @@ contract EverestConsumer is ChainlinkClient, Ownable {
     }
 
     function getLatestSentRequestId() external view returns (bytes32) {
-        require(_latestSentRequestId[msg.sender] != 0, "No requests yet");
+        require(latestSentRequestId[msg.sender] != 0, "No requests yet");
 
-        return _latestSentRequestId[msg.sender];
+        return latestSentRequestId[msg.sender];
     }
 
     function requestExists(bytes32 _requestId) public view returns (bool) {
