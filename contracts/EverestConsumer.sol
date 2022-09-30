@@ -38,7 +38,13 @@ contract EverestConsumer is ChainlinkClient, Ownable {
     }
 
     uint40 private constant OPERATOR_EXPIRATION_TIME = 5 minutes;
-    mapping(address => bytes32) private _lastRequestId;
+
+    // latest sent request id by revealer address
+    mapping(address => bytes32) public latestSentRequestId;
+
+    // latest fulfilled request id by revealee address
+    mapping(address => bytes32) public latestFulfilledRequestId;
+
     mapping(bytes32 => Request) private _requests;
 
     string public signUpURL;
@@ -107,7 +113,7 @@ contract EverestConsumer is ChainlinkClient, Ownable {
             kycTimestamp: 0,
             expiration: expiration
         });
-        _lastRequestId[msg.sender] = requestId;
+        latestSentRequestId[msg.sender] = requestId;
 
         emit Requested(requestId, msg.sender, _revealee, expiration);
     }
@@ -134,6 +140,7 @@ contract EverestConsumer is ChainlinkClient, Ownable {
         request.isFulfilled = true;
         request.isHumanAndUnique = _status != Status.NotFound;
         request.isKYCUser = _status == Status.KYCUser;
+        latestFulfilledRequestId[request.revealee] = _requestId;
 
         emit Fulfilled(
             _requestId,
@@ -168,7 +175,7 @@ contract EverestConsumer is ChainlinkClient, Ownable {
     }
 
     function getRequest(bytes32 _requestId)
-        external
+        public
         view
         ifRequestExists(_requestId)
         returns (Request memory)
@@ -176,14 +183,23 @@ contract EverestConsumer is ChainlinkClient, Ownable {
         return _requests[_requestId];
     }
 
+    function getLatestFulfilledRequest(address _revealee)
+        external
+        view
+        returns
+        (Request memory)
+    {
+        return getRequest(latestFulfilledRequestId[_revealee]);
+    }
+
     function setSignUpURL(string memory _signUpURL) external onlyOwner {
         signUpURL = _signUpURL;
     }
 
-    function getLastRequestId() external view returns (bytes32) {
-        require(_lastRequestId[msg.sender] != 0, "No requests yet");
+    function getLatestSentRequestId() external view returns (bytes32) {
+        require(latestSentRequestId[msg.sender] != 0, "No requests yet");
 
-        return _lastRequestId[msg.sender];
+        return latestSentRequestId[msg.sender];
     }
 
     function requestExists(bytes32 _requestId) public view returns (bool) {
