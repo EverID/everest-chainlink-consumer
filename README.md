@@ -37,24 +37,3 @@ An external adapter and a chainlink node
 
 ```ALLOW_ORIGINS=*```
 - Allow origins
-
-## adapter/.env
-
-### LOG
-
-```LOG_DISABLE_SENTRY=true```
-- Could be true or false
-
-```LOG_LEVEL=debug```
-- Could be panic/fatal/error/warn or warning/info/debug/trace
-
-### ADAPTER
-
-```ADAPTER_API_KEY=KEY```
-- API_KEY for the external adapter (to communicate with everest-chainlink service)
-
-```ADAPTER_CHAINLINK_SERVICE_URL=http://```
-- Everest-chainlink service url
-
-```ADAPTER_PORT=8085```
-- Adapter port
