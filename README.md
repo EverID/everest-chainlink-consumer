@@ -4,13 +4,11 @@ An everest external adapter for KYC data.
 
 ### 0. Required fields
 
-```json
-{
-    "externalJobId": "14f84981-6fac-426a-bda2-992cbf47d2cd", // gen by the chainlink node
-    "oracleAddr": "0xB9756312523826A566e222a34793E414A81c88E1", // Operator.sol
-    "payment": "100000000000000000", // job/job.toml/minContractPaymentLinkJuels
-    "linktoken": "0x53E0bca35eC356BD5ddDFebbD1Fc0fD03FaBad39" // LinkTokenInterface.sol
-}
+```yaml
+externalJobId: "14f84981-6fac-426a-bda2-992cbf47d2cd", // gen by the chainlink node
+oracleAddr: "0xB9756312523826A566e222a34793E414A81c88E1", // Operator.sol
+payment: "100000000000000000", // job/job.toml/minContractPaymentLinkJuels
+linktoken: "0x53E0bca35eC356BD5ddDFebbD1Fc0fD03FaBad39" // LinkTokenInterface.sol
 ```
 
 ### 1. Contracts deployments
@@ -53,12 +51,12 @@ EverestConsumer.getLatestSentRequestId()
 - Wait about 2-3 minutes before the request will be fulfilled.
 - You can get any request by ID or the latest fulfilled request by the address using the following methods:
 ```solidity
-getRequest(bytes32 _requestId)
-getLatestFulfilledRequest(address _revealee)
+EverestConsumer.getRequest(bytes32 _requestId)
+EverestConsumer.getLatestFulfilledRequest(address _revealee)
 ```
 - If getRequest method returns isFulfilled=false for 5 minutes, you can cancel your request and return funds using:
 ```solidity
-cancelRequest(bytes32 _requestId)
+EverestConsumer.cancelRequest(bytes32 _requestId)
 ```
 
 ### 3. Withdraw paid link tokens
