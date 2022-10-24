@@ -210,7 +210,7 @@ contract("EverestConsumer", function([owner, stranger, revealer, revealee, node,
                 expect(await (await this.consumer.getRequest(this.requestId)).isCanceled).to.be.true;
             });
 
-            it("should not fulfill from unauthorized node", async function () {
+            it("should not fulfill from unauthorized job", async function () {
                 await expectRevert(
                     this.oracle.fulfillOracleRequest2(
                         ...oracle.convertFulfill2Params(
@@ -224,7 +224,7 @@ contract("EverestConsumer", function([owner, stranger, revealer, revealee, node,
                 );
             });
 
-            describe("if node authorized", async function () {
+            describe("if job authorized", async function () {
                 beforeEach(async function () {
                     await this.oracle.setAuthorizedSenders([node], {from: owner});
 

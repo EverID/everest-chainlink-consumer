@@ -11,21 +11,21 @@ services:
     restart: always
     image: "postgres"
     env_file:
-      - ./node/database.env
+      - job/database.env
     ports:
       - "5432:5432"
     volumes:
-      - ./node/data:/var/lib/postgresql/data/
+      - ./job/data:/var/lib/postgresql/data/
   chainlink:
     restart: always
     image: "smartcontract/chainlink:1.3.0"
     env_file:
-      - ./node/.env
+      - job/.env
     depends_on:
       - db
     ports:
       - "6688:6688"
     volumes:
-      - ./node/chainlink:/chainlink
-      - ./node/assets:/assets
-    command: node start --password /assets/password.txt --api /assets/api.txt
+      - ./job/chainlink:/chainlink
+      - ./job/assets:/assets
+    command: job start --password /assets/password.txt --api /assets/api.txt
