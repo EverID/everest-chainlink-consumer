@@ -1,39 +1,70 @@
 # everest-chainlink-consumer
 
-An external adapter and a chainlink node
+An everest external adapter for KYC data.
 
-# setup
+### 0. Required fields
 
-## node/database.env
+```json
+{
+    "externalJobId": "14f84981-6fac-426a-bda2-992cbf47d2cd", // gen by the chainlink node
+    "oracleAddr": "0xB9756312523826A566e222a34793E414A81c88E1", // Operator.sol
+    "payment": "100000000000000000", // job/job.toml/minContractPaymentLinkJuels
+    "linktoken": "0x53E0bca35eC356BD5ddDFebbD1Fc0fD03FaBad39" // LinkTokenInterface.sol
+}
+```
 
-```POSTGRES_PASSWORD=admin```
+### 1. Contracts deployments
 
-```POSTGRES_USER=admin```
+In this example we will use metamask & remix.
 
-```POSTGRES_DB=chainlink```
+- Open everest-chainlink-consumer/contracts, copy LinkTokenInterface.sol, Operator.sol, EverestConsumer.sol files to remix, choose polygon network.
+- Compile LinkTokenInterface.sol and add it using "linktoken" address.
+- Compile Operator.sol and add it using "oracleAddr".
+- Compile EverestConsumer.sol and deploy it using the next params:  
+```solidity
+constructor(
+    address _link, // "linktoken"
+    address _oracle, // "oracleAddr"
+    string memory _jobId, // "externalJobId"
+    uint256 _oraclePayment, // "payment"
+    string memory _signUpURL // desired signUp URL
+)
+````
 
-## node/.env
+### 2. How to make a request
 
-```ETH_CHAIN_ID=42```
-- Ethereum chain ID (42 for testing on kovan)
+- Allow EverestConsumer contract spend your link tokens:  
+```solidity
+LinkTokenInterface.approve(
+    address spender, // everest consumer contract
+    uint256 value // more than "payment"
+)
+```
+- Request the status (this method also makes transferFrom):
+```solidity
+EverestConsumer.requestStatus(
+    address _revealee // desired address
+)
+```
+- Retrieve your latest requestId calling this method:
+```solidity
+EverestConsumer.getLatestSentRequestId()
+```
+- Wait about 2-3 minutes before the request will be fulfilled.
+- You can get any request by ID or the latest fulfilled request by the address using the following methods:
+```solidity
+getRequest(bytes32 _requestId)
+getLatestFulfilledRequest(address _revealee)
+```
+- If getRequest method returns isFulfilled=false for 5 minutes, you can cancel your request and return funds using:
+```solidity
+cancelRequest(bytes32 _requestId)
+```
 
-```DATABASE_URL=postgresql://admin:admin@db:5432/chainlink?sslmode=disable```
-- Chainlink database url (look node/database.env)
+### 3. Withdraw paid link tokens
 
-```ETH_URL=wss://kovan.infura.io/ws/v3/{KEY}```
-- Ethereum url
-
-```ROOT=/chainlink```
-- Left default value
-
-```LOG_LEVEL=debug```
-- Log level
-
-```CHAINLINK_TLS_PORT=0```
-- Chainlink TLS port
-
-```SECURE_COOKIES=false```
-- Secure cookies
-
-```ALLOW_ORIGINS=*```
-- Allow origins
+- To withdraw tokens we need an ownership of the operator (oracle) contract.
+- Call withdraw function:
+```solidity
+Operator.withdraw(address recipient, uint256 amount)
+```
