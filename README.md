@@ -1,6 +1,6 @@
 # everest-chainlink-consumer
 
-An everest external adapter for KYC data.
+Consumer contract & chainlink job & external adapter for KYC data.
 
 ### 0. Required fields
 
