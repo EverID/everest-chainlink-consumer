@@ -1,0 +1,72 @@
+name = "Everest Get Address KYC Status v1.0.0"
+type = "directrequest"
+schemaVersion = 1
+contractAddress = "{OPERATOR_ADDRESS}"
+minContractPaymentLinkJuels = "1000000000000000000"
+maxTaskDuration = "0s"
+observationSource = """
+    decode_log      [
+                     type=ethabidecodelog
+                     abi="OracleRequest(bytes32 indexed specId, address requester, bytes32 requestId, uint256 payment, address callbackAddr, bytes4 callbackFunctionId, uint256 cancelExpiration, uint256 dataVersion, bytes data)"
+                     data="$(jobRun.logData)"
+                     topics="$(jobRun.logTopics)"
+                    ]
+    decode_cbor     [
+                     type=cborparse
+                     data="$(decode_log.data)"
+                    ]
+    decode_address  [
+                     type=ethabidecode
+                     abi="address address"
+                     data="$(decode_cbor.address)"
+                    ]
+    fetch           [
+                     type=bridge
+                     name="units-external-adapter"
+                     requestData=<{
+                        "id": $(jobSpec.externalJobID),
+                        "data": {"address": $(decode_address.address)}
+                     }>
+                    ]
+    parse_status    [
+                     type=jsonparse
+                     path="data,status"
+                     data="$(fetch)"
+                    ]
+    parse_time      [
+                     type=jsonparse
+                     path="data,kyc_timestamp"
+                     data="$(fetch)"
+                    ]
+    encode_data     [
+                     type=ethabiencode
+                     abi="(bytes32 _requestId, uint8 _status, uint40 _kycTimestamp)"
+                     data=<{
+                        "_requestId": $(decode_log.requestId),
+                        "_status": $(parse_status),
+                        "_kycTimestamp": $(parse_time)
+                     }>
+                    ]
+    encode_tx       [
+                     type=ethabiencode
+                     abi="fulfillOracleRequest2(bytes32 requestId, uint256 payment, address callbackAddress, bytes4 callbackFunctionId, uint256 expiration, bytes calldata data)"
+                     data=<{
+                        "requestId": $(decode_log.requestId),
+                        "payment": $(decode_log.payment),
+                        "callbackAddress": $(decode_log.callbackAddr),
+                        "callbackFunctionId": $(decode_log.callbackFunctionId),
+                        "expiration": $(decode_log.cancelExpiration),
+                        "data": $(encode_data)
+                     }>
+                    ]
+    submit_tx       [
+                     type=ethtx
+                     to="{OPERATOR_ADDRESS}"
+                     data="$(encode_tx)"
+                     minConfirmations="2"
+                    ]
+    decode_log -> decode_cbor -> decode_address -> fetch
+    fetch -> parse_status -> encode_data
+    fetch -> parse_time -> encode_data
+    encode_data -> encode_tx -> submit_tx
+"""

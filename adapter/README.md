@@ -1,0 +1,1 @@
+An external adapter is provided by the linkpool team: [Adapter](https://github.com/linkpoolio/adapters/tree/develop/packages/kyc)
