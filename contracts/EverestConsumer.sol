@@ -6,50 +6,25 @@ import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./IEverestConsumer.sol";
 
-contract EverestConsumer is ChainlinkClient, Ownable {
+contract EverestConsumer is IEverestConsumer, ChainlinkClient, Ownable {
     using Chainlink for Chainlink.Request;
     using SafeERC20 for IERC20;
-
-    enum Status {
-        // Address does not exist
-        NotFound,
-        // KYC User status
-        KYCUser,
-        // Human & Unique status
-        HumanAndUnique
-    }
-
-    struct Request {
-        bool isFulfilled; // 1 byte - slot 0
-        bool isCanceled; // 1 byte - slot 0
-        bool isHumanAndUnique; // 1 byte - slot 0
-        bool isKYCUser; // 1 byte - slot 0
-        address revealer; // 20 bytes - slot 0
-        address revealee; // 20 bytes - slot 1
-        // `kycTimestamp` is zero if the status is not `KYCUser`,
-        // otherwise it is an epoch timestamp that represents the KYC date
-        uint40 kycTimestamp; // 5 bytes - slot 1
-        // expiration = block.timestamp while `requestStatus` + 5 minutes.
-        // If `isFulfilled` and `isCanceled` are false by this time -
-        // the the owner of the request can cancel its
-        // request using `cancelRequest` and return paid link tokens
-        uint40 expiration; // 5 bytes - slot 1
-    }
 
     uint40 private constant OPERATOR_EXPIRATION_TIME = 5 minutes;
 
     // latest sent request id by revealer address
-    mapping(address => bytes32) public latestSentRequestId;
+    mapping(address => bytes32) public override latestSentRequestId;
 
     // latest fulfilled request id by revealee address
-    mapping(address => bytes32) public latestFulfilledRequestId;
+    mapping(address => bytes32) public override latestFulfilledRequestId;
 
     mapping(bytes32 => Request) private _requests;
 
-    string public signUpURL;
-    bytes32 public jobId;
-    uint256 public oraclePayment;
+    string public override signUpURL;
+    bytes32 public override jobId;
+    uint256 public override oraclePayment;
 
     event Requested(
         bytes32 _requestId,
@@ -85,7 +60,7 @@ contract EverestConsumer is ChainlinkClient, Ownable {
         signUpURL = _signUpURL;
     }
 
-    function requestStatus(address _revealee) external {
+    function requestStatus(address _revealee) external override {
         require(_revealee != address(0), "Revelaee should not be zero address");
 
         IERC20(chainlinkTokenAddress()).safeTransferFrom(
@@ -122,7 +97,7 @@ contract EverestConsumer is ChainlinkClient, Ownable {
         bytes32 _requestId,
         Status _status,
         uint40 _kycTimestamp
-    ) external recordChainlinkFulfillment(_requestId) {
+    ) external override recordChainlinkFulfillment(_requestId) {
         if (_status == Status.KYCUser) {
             require(
                 _kycTimestamp != 0,
@@ -151,10 +126,9 @@ contract EverestConsumer is ChainlinkClient, Ownable {
         );
     }
 
-    function cancelRequest(bytes32 _requestId)
-        external
-        ifRequestExists(_requestId)
-    {
+    function cancelRequest(
+        bytes32 _requestId
+    ) external override ifRequestExists(_requestId) {
         Request storage request = _requests[_requestId];
         require(
             !request.isCanceled && !request.isFulfilled,
@@ -174,43 +148,45 @@ contract EverestConsumer is ChainlinkClient, Ownable {
         request.isCanceled = true;
     }
 
-    function getRequest(bytes32 _requestId)
+    function getRequest(
+        bytes32 _requestId
+    )
         public
         view
+        override
         ifRequestExists(_requestId)
         returns (Request memory)
     {
         return _requests[_requestId];
     }
 
-    function getLatestFulfilledRequest(address _revealee)
-        external
-        view
-        returns
-        (Request memory)
-    {
+    function getLatestFulfilledRequest(
+        address _revealee
+    ) external view override returns (Request memory) {
         return getRequest(latestFulfilledRequestId[_revealee]);
     }
 
-    function setSignUpURL(string memory _signUpURL) external onlyOwner {
+    function setSignUpURL(
+        string memory _signUpURL
+    ) external override onlyOwner {
         signUpURL = _signUpURL;
     }
 
-    function getLatestSentRequestId() external view returns (bytes32) {
+    function getLatestSentRequestId() external view override returns (bytes32) {
         require(latestSentRequestId[msg.sender] != 0, "No requests yet");
 
         return latestSentRequestId[msg.sender];
     }
 
-    function requestExists(bytes32 _requestId) public view returns (bool) {
+    function requestExists(
+        bytes32 _requestId
+    ) public view override returns (bool) {
         return _requests[_requestId].revealer != address(0);
     }
 
-    function statusToString(Status _status)
-        external
-        pure
-        returns (string memory)
-    {
+    function statusToString(
+        Status _status
+    ) external pure override returns (string memory) {
         if (_status == Status.KYCUser) {
             return "KYC_USER";
         }
@@ -220,35 +196,35 @@ contract EverestConsumer is ChainlinkClient, Ownable {
         return "NOT_FOUND";
     }
 
-    function setOracle(address _oracle) external onlyOwner {
+    function setOracle(address _oracle) external override onlyOwner {
         setChainlinkOracle(_oracle);
     }
 
-    function setLink(address _link) external onlyOwner {
+    function setLink(address _link) external override onlyOwner {
         setChainlinkToken(_link);
     }
 
-    function setOraclePayment(uint256 _oraclePayment) external onlyOwner {
+    function setOraclePayment(
+        uint256 _oraclePayment
+    ) external override onlyOwner {
         oraclePayment = _oraclePayment;
     }
 
-    function setJobId(string memory _jobId) external onlyOwner {
+    function setJobId(string memory _jobId) external override onlyOwner {
         jobId = stringToBytes32(_jobId);
     }
 
-    function oracleAddress() external view returns (address) {
+    function oracleAddress() external view override returns (address) {
         return chainlinkOracleAddress();
     }
 
-    function linkAddress() external view returns (address) {
+    function linkAddress() external view override returns (address) {
         return chainlinkTokenAddress();
     }
 
-    function stringToBytes32(string memory _source)
-        private
-        pure
-        returns (bytes32)
-    {
+    function stringToBytes32(
+        string memory _source
+    ) private pure returns (bytes32) {
         bytes memory source = bytes(_source);
         require(source.length == 32, "Incorrect length");
         return bytes32(source);
