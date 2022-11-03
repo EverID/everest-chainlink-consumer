@@ -37,19 +37,19 @@ interface IEverestConsumer {
 
   function jobId() external view returns (bytes32);
 
-  /// @notice Oracle payment. Call this method to get current request price. Please,
-  /// make sure that an EverestConsumer contract has enough allowance before requesting
-  /// @return price Current request price
+  /// @notice Oracle payment. Call this method to get a current request price. Please,
+  /// make sure that the EverestConsumer contract has enough allowance before requesting
+  /// @return price A current request price
   function oraclePayment() external view returns (uint256 price);
 
   /// @notice Request status. You should approve link token spending
-  /// to EverestConsumer contract first. The current request price you can check
-  /// calling `oraclePayment()` method.
+  /// for the EverestConsumer contract first. You can also check a current
+  /// request price in link tokens calling an `oraclePayment()` method.
   /// @param _revealee An address of the person which KYC status you want to get.
   function requestStatus(address _revealee) external;
 
-  /// @notice Fulfill. Only operator contract should call this method
-  /// @param _requestId id An id of request to be fulfilled
+  /// @notice Fulfill. Only an operator contract should call this method
+  /// @param _requestId id An id of the request to be fulfilled
   /// @param _status A KYC status from the everest API response:
   /// 0 - `NotFound`: `isHumanAndUnique`=false and `isKYCUser`=false
   /// 1 - `HumanAndUnique`: `isHumanAndUnique`=true and `isKYCUser`=false
@@ -57,14 +57,14 @@ interface IEverestConsumer {
   /// @param _kycTimestamp A KYC timestamp from the everest API response
   function fulfill(bytes32 _requestId, Status _status, uint40 _kycTimestamp) external;
 
-  /// @notice Cancel request. If you didn't get response for 5 minutes, you can
+  /// @notice Cancel request. If you don't get response for 5 minutes, you can
   /// call this function to return funds
   /// @param _requestId An id of the request to be cancelled
   function cancelRequest(bytes32 _requestId) external;
 
-  /// @notice Get request. Call this method to get current status of the request
+  /// @notice Get request. Call this method to get a current status of the request
   /// @param _requestId An id of the request you want to get
-  /// @return request Request
+  /// @return request Request & response data
   function getRequest(bytes32 _requestId) external view returns (Request memory request);
 
   function getLatestFulfilledRequest(address _revealee) external view returns (Request memory);
