@@ -63,9 +63,16 @@ contract EverestConsumer is IEverestConsumer, ChainlinkClient, Ownable {
     function requestStatus(address _revealee) external override {
         require(_revealee != address(0), "Revelaee should not be zero address");
 
-        IERC20(chainlinkTokenAddress()).safeTransferFrom(msg.sender, address(this), oraclePayment);
+        IERC20(chainlinkTokenAddress()).safeTransferFrom(
+            msg.sender,
+            address(this),
+            oraclePayment
+        );
 
-        Chainlink.Request memory request = buildOperatorRequest(jobId, this.fulfill.selector);
+        Chainlink.Request memory request = buildOperatorRequest(
+            jobId,
+            this.fulfill.selector
+        );
         request.addBytes("address", abi.encode(_revealee));
 
         bytes32 requestId = sendOperatorRequest(request, oraclePayment);
@@ -92,9 +99,15 @@ contract EverestConsumer is IEverestConsumer, ChainlinkClient, Ownable {
         uint40 _kycTimestamp
     ) external override recordChainlinkFulfillment(_requestId) {
         if (_status == Status.KYCUser) {
-            require(_kycTimestamp != 0, "_kycTimestamp should not be zero for KYCUser");
+            require(
+                _kycTimestamp != 0,
+                "_kycTimestamp should not be zero for KYCUser"
+            );
         } else {
-            require(_kycTimestamp == 0, "_kycTimestamp should be zero for non-KYCUser");
+            require(
+                _kycTimestamp == 0,
+                "_kycTimestamp should be zero for non-KYCUser"
+            );
         }
 
         Request storage request = _requests[_requestId];
@@ -104,16 +117,27 @@ contract EverestConsumer is IEverestConsumer, ChainlinkClient, Ownable {
         request.isKYCUser = _status == Status.KYCUser;
         latestFulfilledRequestId[request.revealee] = _requestId;
 
-        emit Fulfilled(_requestId, request.revealer, request.revealee, _status, _kycTimestamp);
+        emit Fulfilled(
+            _requestId,
+            request.revealer,
+            request.revealee,
+            _status,
+            _kycTimestamp
+        );
     }
 
-    function cancelRequest(bytes32 _requestId) external override ifRequestExists(_requestId) {
+    function cancelRequest(
+        bytes32 _requestId
+    ) external override ifRequestExists(_requestId) {
         Request storage request = _requests[_requestId];
         require(
             !request.isCanceled && !request.isFulfilled,
             "Request should not be canceled or fulfilled"
         );
-        require(request.revealer == msg.sender, "You are not an owner of the request");
+        require(
+            request.revealer == msg.sender,
+            "You are not an owner of the request"
+        );
         cancelChainlinkRequest(
             _requestId,
             oraclePayment,
@@ -126,7 +150,13 @@ contract EverestConsumer is IEverestConsumer, ChainlinkClient, Ownable {
 
     function getRequest(
         bytes32 _requestId
-    ) public view override ifRequestExists(_requestId) returns (Request memory) {
+    )
+        public
+        view
+        override
+        ifRequestExists(_requestId)
+        returns (Request memory)
+    {
         return _requests[_requestId];
     }
 
@@ -136,7 +166,9 @@ contract EverestConsumer is IEverestConsumer, ChainlinkClient, Ownable {
         return getRequest(latestFulfilledRequestId[_revealee]);
     }
 
-    function setSignUpURL(string memory _signUpURL) external override onlyOwner {
+    function setSignUpURL(
+        string memory _signUpURL
+    ) external override onlyOwner {
         signUpURL = _signUpURL;
     }
 
@@ -146,11 +178,15 @@ contract EverestConsumer is IEverestConsumer, ChainlinkClient, Ownable {
         return latestSentRequestId[msg.sender];
     }
 
-    function requestExists(bytes32 _requestId) public view override returns (bool) {
+    function requestExists(
+        bytes32 _requestId
+    ) public view override returns (bool) {
         return _requests[_requestId].revealer != address(0);
     }
 
-    function statusToString(Status _status) external pure override returns (string memory) {
+    function statusToString(
+        Status _status
+    ) external pure override returns (string memory) {
         if (_status == Status.KYCUser) {
             return "KYC_USER";
         }
@@ -168,7 +204,9 @@ contract EverestConsumer is IEverestConsumer, ChainlinkClient, Ownable {
         setChainlinkToken(_link);
     }
 
-    function setOraclePayment(uint256 _oraclePayment) external override onlyOwner {
+    function setOraclePayment(
+        uint256 _oraclePayment
+    ) external override onlyOwner {
         oraclePayment = _oraclePayment;
     }
 
@@ -184,7 +222,9 @@ contract EverestConsumer is IEverestConsumer, ChainlinkClient, Ownable {
         return chainlinkTokenAddress();
     }
 
-    function stringToBytes32(string memory _source) private pure returns (bytes32) {
+    function stringToBytes32(
+        string memory _source
+    ) private pure returns (bytes32) {
         bytes memory source = bytes(_source);
         require(source.length == 32, "Incorrect length");
         return bytes32(source);

@@ -29,9 +29,13 @@ interface IEverestConsumer {
         uint40 expiration; // 5 bytes - slot 1
     }
 
-    function latestSentRequestId(address _revealer) external view returns (bytes32);
+    function latestSentRequestId(
+        address _revealer
+    ) external view returns (bytes32);
 
-    function latestFulfilledRequestId(address _revealee) external view returns (bytes32);
+    function latestFulfilledRequestId(
+        address _revealee
+    ) external view returns (bytes32);
 
     function signUpURL() external view returns (string memory);
 
@@ -55,7 +59,11 @@ interface IEverestConsumer {
     /// 1 - `HumanAndUnique`: `isHumanAndUnique`=true and `isKYCUser`=false
     /// 2 - `NotFound`: `isHumanAndUnique`=true and `isKYCUser`=true
     /// @param _kycTimestamp A KYC timestamp from the everest API response
-    function fulfill(bytes32 _requestId, Status _status, uint40 _kycTimestamp) external;
+    function fulfill(
+        bytes32 _requestId,
+        Status _status,
+        uint40 _kycTimestamp
+    ) external;
 
     /// @notice Cancel request. If you don't get response for 5 minutes, you can
     /// call this function to return funds
@@ -65,9 +73,13 @@ interface IEverestConsumer {
     /// @notice Get request. Call this method to get a current status of the request
     /// @param _requestId An id of the request you want to get
     /// @return request Request & response data
-    function getRequest(bytes32 _requestId) external view returns (Request memory request);
+    function getRequest(
+        bytes32 _requestId
+    ) external view returns (Request memory request);
 
-    function getLatestFulfilledRequest(address _revealee) external view returns (Request memory);
+    function getLatestFulfilledRequest(
+        address _revealee
+    ) external view returns (Request memory);
 
     function setSignUpURL(string memory _signUpURL) external;
 
@@ -75,7 +87,9 @@ interface IEverestConsumer {
 
     function requestExists(bytes32 _requestId) external view returns (bool);
 
-    function statusToString(Status _status) external view returns (string memory);
+    function statusToString(
+        Status _status
+    ) external view returns (string memory);
 
     function setOracle(address _oracle) external;
 
