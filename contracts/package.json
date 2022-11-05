@@ -1,0 +1,16 @@
+{
+  "name": "everest-consumer",
+  "version": "1.0.0",
+  "files": [
+    "interfaces/IEverestConsumer.sol"
+  ],
+  "description": "An interface for the everest consumer contract",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EverID/everest-chainlink-consumer.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT"
+}
