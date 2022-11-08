@@ -6,7 +6,7 @@ import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./IEverestConsumer.sol";
+import "./interfaces/IEverestConsumer.sol";
 
 contract EverestConsumer is IEverestConsumer, ChainlinkClient, Ownable {
     using Chainlink for Chainlink.Request;
