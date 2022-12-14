@@ -9,7 +9,20 @@ interface IExampleContract {
         uint40 kycTimestamp;
     }
 
-    function requestAddressVerification(address _consumer, address _whose) external;
+    /// @dev Request verification. Requests the status from the `EverestConsumer` smartcontract
+    /// and stores the metadata of the made request to the storage
+    /// @param _whose A verification address
+    function requestVerification(address _whose) external;
 
-    function getLatestVerification(address _whose) external view returns (KYCResponse memory);
+    /// @notice Get latest verification. Queries the latest verification result by the metadata
+    /// stored while latest calling `requestVerification` method
+    /// @param _whose A verification address
+    /// @return kycResponse KYC response. There are 3 types of the response:
+    /// `isHumanAndUnique`=false and `isKYCUser`=false and `kycTimestamp`=0:
+    /// address not found | request failed | request not fulfilled
+    /// `isHumanAndUnique`=true and `isKYCUser`=false and `kycTimestamp`=0: Human & Unique status
+    /// `isHumanAndUnique`=true and `isKYCUser`=true and `kycTimestamp`!=0: KYC User status
+    function getLatestVerification(
+        address _whose
+    ) external view returns (KYCResponse memory kycResponse);
 }
