@@ -15,7 +15,7 @@ interface IExampleContract {
     function requestVerification(address _whose) external;
 
     /// @notice Get latest verification. Queries the latest verification result by the metadata
-    /// stored while latest calling `requestVerification` method
+    /// saved during the latest `requestVerification` method call
     /// @param _whose A verification address
     /// @return kycResponse KYC response. There are 3 types of the response:
     /// `isHumanAndUnique`=false and `isKYCUser`=false and `kycTimestamp`=0:
