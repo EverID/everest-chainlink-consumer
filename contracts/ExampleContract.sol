@@ -7,10 +7,11 @@ import "./interfaces/IEverestConsumer.sol";
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
 
-contract ExampleContract is IExampleContract {
+contract ExampleContract is IExampleContract, Ownable {
     using SafeERC20 for IERC20;
 
     mapping(address => bytes32) public latestVerificationRequestId; // revealee => request id
@@ -19,21 +20,18 @@ contract ExampleContract is IExampleContract {
 
     constructor(address _everestConsumer) {
         everestConsumer = IEverestConsumer(_everestConsumer);
+
+        LinkTokenInterface(everestConsumer.linkAddress()).approve(
+            _everestConsumer,
+            type(uint256).max
+        );
     }
 
-    function requestVerification(address _whose) external override {
-        address linkToken = everestConsumer.linkAddress();
-
-        uint256 oraclePayment = everestConsumer.oraclePayment();
-
-        IERC20(linkToken).safeTransferFrom(
+    function requestVerification(address _whose) external override onlyOwner {
+        IERC20(everestConsumer.linkAddress()).safeTransferFrom(
             msg.sender,
             address(this),
-            oraclePayment
-        );
-        LinkTokenInterface(linkToken).approve(
-            address(everestConsumer),
-            oraclePayment
+            everestConsumer.oraclePayment()
         );
 
         everestConsumer.requestStatus(_whose);
