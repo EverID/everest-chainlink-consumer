@@ -1,20 +1,19 @@
 module.exports = {
-  contracts_directory: "./contracts/**/*.sol",
+    contracts_directory: "./contracts/**/*.sol",
 
-  networks: {
-    ganache: {
-      host: "127.0.0.1",
-      port: 7545,
-      network_id: 5777
-    }
-  },
+    networks: {
+        ganache: {
+            host: "127.0.0.1",
+            port: 7545,
+            network_id: 5777,
+        },
+    },
 
-  mocha: {
-  },
+    mocha: {},
 
-  compilers: {
-    solc: {
-      version: "pragma"
-    }
-  }
+    compilers: {
+        solc: {
+            version: "pragma",
+        },
+    },
 };

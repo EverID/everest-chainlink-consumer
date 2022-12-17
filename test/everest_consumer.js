@@ -6,20 +6,20 @@ const { constants, expectRevert, expectEvent, time } = require("@openzeppelin/te
 const { expect } = require("chai");
 const { oracle, helpers } = require("@chainlink/test-helpers");
 
-contract("EverestConsumer", function([owner, stranger, revealer, revealee, node, randomAddress]) {
+contract("EverestConsumer", function ([owner, stranger, revealer, revealee, node, randomAddress]) {
     const jobId = "509e8dd8de054d3f918640ab0a2b77d8";
     const oraclePayment = "1000000000000000000"; // 10 ** 18
-    const defaultSignUpURL = "https://everest.org"
+    const defaultSignUpURL = "https://everest.org";
     beforeEach(async function () {
-        this.link = await LinkToken.new({from: owner});
-        this.oracle = await Oracle.new(this.link.address, owner, {from: owner});
+        this.link = await LinkToken.new({ from: owner });
+        this.oracle = await Oracle.new(this.link.address, owner, { from: owner });
         this.consumer = await EverestConsumer.new(
             this.link.address,
             this.oracle.address,
             jobId,
             oraclePayment,
             defaultSignUpURL,
-            {from: owner}
+            { from: owner }
         );
     });
 
@@ -36,13 +36,13 @@ contract("EverestConsumer", function([owner, stranger, revealer, revealee, node,
 
     describe("#setOracle", async function () {
         it("should set properly with owner sender", async function () {
-            await this.consumer.setOracle(randomAddress, {from: owner});
+            await this.consumer.setOracle(randomAddress, { from: owner });
             expect(await this.consumer.oracleAddress()).to.be.equal(randomAddress);
         });
 
         it("should revert if sender is not an owner", async function () {
             await expectRevert(
-                this.consumer.setOracle(randomAddress, {from: stranger}),
+                this.consumer.setOracle(randomAddress, { from: stranger }),
                 "Ownable: caller is not the owner"
             );
         });
@@ -50,13 +50,13 @@ contract("EverestConsumer", function([owner, stranger, revealer, revealee, node,
 
     describe("#setOraclePayments", async function () {
         it("should set properly with owner sender", async function () {
-            await this.consumer.setOraclePayment("1", {from: owner});
+            await this.consumer.setOraclePayment("1", { from: owner });
             expect(await this.consumer.oraclePayment()).to.be.bignumber.equal("1");
         });
 
         it("should revert if sender is not an owner", async function () {
             await expectRevert(
-                this.consumer.setOraclePayment("1", {from: stranger}),
+                this.consumer.setOraclePayment("1", { from: stranger }),
                 "Ownable: caller is not the owner"
             );
         });
@@ -64,13 +64,13 @@ contract("EverestConsumer", function([owner, stranger, revealer, revealee, node,
 
     describe("#setLink", async function () {
         it("should set properly with owner sender", async function () {
-            await this.consumer.setLink(randomAddress, {from: owner});
+            await this.consumer.setLink(randomAddress, { from: owner });
             expect(await this.consumer.linkAddress()).to.be.equal(randomAddress);
         });
 
         it("should revert if sender is not an owner", async function () {
             await expectRevert(
-                this.consumer.setLink(randomAddress, {from: stranger}),
+                this.consumer.setLink(randomAddress, { from: stranger }),
                 "Ownable: caller is not the owner"
             );
         });
@@ -79,15 +79,12 @@ contract("EverestConsumer", function([owner, stranger, revealer, revealee, node,
     describe("#setSignUpURL", async function () {
         const url = "https://everest.sign.up.mocked.org/";
         it("should set properly with owner sender", async function () {
-            await this.consumer.setSignUpURL(url, {from: owner});
+            await this.consumer.setSignUpURL(url, { from: owner });
             expect(await this.consumer.signUpURL()).to.be.equal(url);
         });
 
         it("should revert if sender is not an owner", async function () {
-            await expectRevert(
-                this.consumer.setSignUpURL(url, {from: stranger}),
-                "Ownable: caller is not the owner"
-            );
+            await expectRevert(this.consumer.setSignUpURL(url, { from: stranger }), "Ownable: caller is not the owner");
         });
     });
 
@@ -96,22 +93,19 @@ contract("EverestConsumer", function([owner, stranger, revealer, revealee, node,
         const incorrectJobId = "7223acbd01654282865b6789241260131";
 
         it("should set properly with owner sender", async function () {
-            await this.consumer.setJobId(newJobId, {from: owner});
+            await this.consumer.setJobId(newJobId, { from: owner });
             expect(await this.consumer.jobId()).to.be.equal(web3.utils.asciiToHex(newJobId));
         });
 
         it("should revert if sender is not an owner", async function () {
             await expectRevert(
-                this.consumer.setJobId(newJobId, {from: stranger}),
+                this.consumer.setJobId(newJobId, { from: stranger }),
                 "Ownable: caller is not the owner"
             );
         });
 
         it("should revert if wrong invalid job id value passed", async function () {
-            await expectRevert(
-                this.consumer.setJobId(incorrectJobId, {from: owner}),
-                "Incorrect length"
-            );
+            await expectRevert(this.consumer.setJobId(incorrectJobId, { from: owner }), "Incorrect length");
         });
     });
 
@@ -126,30 +120,27 @@ contract("EverestConsumer", function([owner, stranger, revealer, revealee, node,
     describe("#getLatestSentRequestId", async function () {
         it("should revert if no requests yet", async function () {
             await expectRevert(this.consumer.getLatestSentRequestId(), "No requests yet");
-        })
+        });
     });
 
     describe("#getRequest #requestExists", async function () {
         const mockedRequestId = helpers.toBytes32String("mocked");
 
         it("should revert if request with passed request id does not exist", async function () {
-            expect(await this.consumer.requestExists(mockedRequestId, {from: stranger})).to.be.false;
+            expect(await this.consumer.requestExists(mockedRequestId, { from: stranger })).to.be.false;
 
-            await expectRevert(
-                this.consumer.getRequest(mockedRequestId, {from: owner}),
-                "Request does not exist"
-            );
+            await expectRevert(this.consumer.getRequest(mockedRequestId, { from: owner }), "Request does not exist");
         });
     });
 
     describe("#requestStatus #fulfill #cancelRequest", async function () {
         beforeEach(async function () {
-            await this.link.transfer(revealer, oraclePayment, {from: owner});
+            await this.link.transfer(revealer, oraclePayment, { from: owner });
         });
 
         it("should revert if not enough allowance", async function () {
             await expectRevert(
-                this.consumer.requestStatus(revealee, {from: revealer}),
+                this.consumer.requestStatus(revealee, { from: revealer }),
                 "SafeERC20: low-level call failed."
             );
         });
@@ -167,10 +158,10 @@ contract("EverestConsumer", function([owner, stranger, revealer, revealee, node,
             const responseTypes = ["uint8", "uint256"];
 
             beforeEach(async function () {
-                await this.link.approve(this.consumer.address, oraclePayment, {from: revealer});
-                const requestTx = await this.consumer.requestStatus(revealee, {from: revealer});
+                await this.link.approve(this.consumer.address, oraclePayment, { from: revealer });
+                const requestTx = await this.consumer.requestStatus(revealee, { from: revealer });
                 this.request = oracle.decodeRunRequest(requestTx.receipt.rawLogs?.[4]);
-                this.requestId = await this.consumer.getLatestSentRequestId({from: revealer});
+                this.requestId = await this.consumer.getLatestSentRequestId({ from: revealer });
                 this.requestTime = await time.latest();
                 this.expiration = this.requestTime.add(time.duration.minutes(requestExpirationMinutes));
 
@@ -189,14 +180,14 @@ contract("EverestConsumer", function([owner, stranger, revealer, revealee, node,
 
             it("should not cancel if caller is not a revealer", async function () {
                 await expectRevert(
-                    this.consumer.cancelRequest(this.requestId, {from: stranger}),
+                    this.consumer.cancelRequest(this.requestId, { from: stranger }),
                     "You are not an owner of the request"
                 );
             });
 
             it("should not cancel if request is not expired", async function () {
                 await expectRevert(
-                    this.consumer.cancelRequest(this.requestId, {from: revealer}),
+                    this.consumer.cancelRequest(this.requestId, { from: revealer }),
                     "Request is not expired"
                 );
             });
@@ -205,7 +196,7 @@ contract("EverestConsumer", function([owner, stranger, revealer, revealee, node,
                 await time.increaseTo(this.expiration);
                 expect(await this.link.balanceOf(revealer)).to.be.bignumber.equal("0");
                 expect(await (await this.consumer.getRequest(this.requestId)).isCanceled).to.be.false;
-                await this.consumer.cancelRequest(this.requestId, {from: revealer});
+                await this.consumer.cancelRequest(this.requestId, { from: revealer });
                 expect(await this.link.balanceOf(revealer)).to.be.bignumber.equal(oraclePayment);
                 expect(await (await this.consumer.getRequest(this.requestId)).isCanceled).to.be.true;
             });
@@ -217,8 +208,8 @@ contract("EverestConsumer", function([owner, stranger, revealer, revealee, node,
                             this.request,
                             responseTypes,
                             [kycUserStatus, nonZeroKycTimestamp],
-                            {from: node}
-                        ),
+                            { from: node }
+                        )
                     ),
                     "Not authorized sender"
                 );
@@ -226,18 +217,15 @@ contract("EverestConsumer", function([owner, stranger, revealer, revealee, node,
 
             describe("if job authorized", async function () {
                 beforeEach(async function () {
-                    await this.oracle.setAuthorizedSenders([node], {from: owner});
+                    await this.oracle.setAuthorizedSenders([node], { from: owner });
 
                     this.doFulfill = async function (status, kycTimestamp) {
                         return await this.oracle.fulfillOracleRequest2(
-                            ...oracle.convertFulfill2Params(
-                                this.request,
-                                responseTypes,
-                                [status, kycTimestamp],
-                                {from: node}
-                            ),
+                            ...oracle.convertFulfill2Params(this.request, responseTypes, [status, kycTimestamp], {
+                                from: node,
+                            })
                         );
-                    }
+                    };
 
                     this.expectFulfill = async function (status, kycTimestamp) {
                         const tx = await this.doFulfill(status, kycTimestamp);
@@ -250,7 +238,7 @@ contract("EverestConsumer", function([owner, stranger, revealer, revealee, node,
                             _kycTimestamp: kycTimestamp,
                         });
 
-                        const fulfilledRequest = await this.consumer.getRequest(this.requestId, {from: revealer});
+                        const fulfilledRequest = await this.consumer.getRequest(this.requestId, { from: revealer });
 
                         expect(fulfilledRequest.isCanceled).to.be.false;
                         expect(fulfilledRequest.isFulfilled).to.be.true;
@@ -274,21 +262,25 @@ contract("EverestConsumer", function([owner, stranger, revealer, revealee, node,
                             default:
                                 break;
                         }
-                    }
+                    };
 
                     this.expectNotFulfill = async function (status, kycTimestamp) {
                         const tx = await this.doFulfill(status, kycTimestamp);
 
-                        await expectEvent.notEmitted.inTransaction(tx.receipt.transactionHash, this.consumer, "Fulfilled");
+                        await expectEvent.notEmitted.inTransaction(
+                            tx.receipt.transactionHash,
+                            this.consumer,
+                            "Fulfilled"
+                        );
 
-                        const fulfilledRequest = await this.consumer.getRequest(this.requestId, {from: revealer});
+                        const fulfilledRequest = await this.consumer.getRequest(this.requestId, { from: revealer });
 
                         expect(fulfilledRequest.isCanceled).to.be.false;
                         expect(fulfilledRequest.isFulfilled).to.be.false;
                         expect(fulfilledRequest.isHumanAndUnique).to.be.false;
                         expect(fulfilledRequest.isKYCUser).to.be.false;
                         expect(fulfilledRequest.kycTimestamp).to.be.bignumber.equal("0");
-                    }
+                    };
                 });
 
                 it("should fulfill kyc status with non-zero kyc timestamp", async function () {

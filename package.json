@@ -9,6 +9,7 @@
   "scripts": {
     "compile": "truffle compile",
     "test": "truffle test --compile-none",
+    "lint-js-fix": "prettier --write \"./**/*.js\"",
     "lint-sol-fix": "prettier --write \"contracts/**/*.sol\""
   },
   "repository": {
