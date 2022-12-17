@@ -19,6 +19,8 @@ contract ExampleContract is IExampleContract, Ownable {
     IEverestConsumer public everestConsumer;
 
     constructor(address _everestConsumer) {
+        require(_everestConsumer != address(0), "Consumer is zero");
+
         everestConsumer = IEverestConsumer(_everestConsumer);
 
         LinkTokenInterface(everestConsumer.linkAddress()).approve(
@@ -43,12 +45,12 @@ contract ExampleContract is IExampleContract, Ownable {
     function getLatestVerification(
         address _whose
     ) external view override returns (KYCResponse memory kycResponse) {
-        IEverestConsumer.Request memory request = everestConsumer.getRequest(
-            latestVerificationRequestId[_whose]
-        );
-
-        kycResponse.isHumanAndUnique = request.isHumanAndUnique;
-        kycResponse.isKYCUser = request.isKYCUser;
-        kycResponse.kycTimestamp = request.kycTimestamp;
+        try
+            everestConsumer.getRequest(latestVerificationRequestId[_whose])
+        returns (IEverestConsumer.Request memory request) {
+            kycResponse.isHumanAndUnique = request.isHumanAndUnique;
+            kycResponse.isKYCUser = request.isKYCUser;
+            kycResponse.kycTimestamp = request.kycTimestamp;
+        } catch {}
     }
 }
