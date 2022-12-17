@@ -26,12 +26,20 @@ contract ExampleContract is IExampleContract {
 
         uint256 oraclePayment = everestConsumer.oraclePayment();
 
-        IERC20(linkToken).safeTransferFrom(msg.sender, address(this), oraclePayment);
-        LinkTokenInterface(linkToken).approve(address(everestConsumer), oraclePayment);
+        IERC20(linkToken).safeTransferFrom(
+            msg.sender,
+            address(this),
+            oraclePayment
+        );
+        LinkTokenInterface(linkToken).approve(
+            address(everestConsumer),
+            oraclePayment
+        );
 
         everestConsumer.requestStatus(_whose);
 
-        latestVerificationRequestId[_whose] = everestConsumer.getLatestSentRequestId();
+        latestVerificationRequestId[_whose] = everestConsumer
+            .getLatestSentRequestId();
     }
 
     function getLatestVerification(
