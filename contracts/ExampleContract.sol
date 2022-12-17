@@ -13,7 +13,7 @@ import "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
 contract ExampleContract is IExampleContract {
     using SafeERC20 for IERC20;
 
-    mapping(address => bytes32) private _latestSentRequestId;
+    mapping(address => bytes32) public latestVerificationRequestId; // revealee => request id
 
     IEverestConsumer public everestConsumer;
 
@@ -31,14 +31,14 @@ contract ExampleContract is IExampleContract {
 
         everestConsumer.requestStatus(_whose);
 
-        _latestSentRequestId[_whose] = everestConsumer.getLatestSentRequestId();
+        latestVerificationRequestId[_whose] = everestConsumer.getLatestSentRequestId();
     }
 
     function getLatestVerification(
         address _whose
     ) external view override returns (KYCResponse memory kycResponse) {
         IEverestConsumer.Request memory request = everestConsumer.getRequest(
-            _latestSentRequestId[_whose]
+            latestVerificationRequestId[_whose]
         );
 
         kycResponse.isHumanAndUnique = request.isHumanAndUnique;
