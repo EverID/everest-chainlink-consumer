@@ -45,12 +45,18 @@ contract ExampleContract is IExampleContract, Ownable {
     function getLatestVerification(
         address _whose
     ) external view override returns (KYCResponse memory kycResponse) {
-        try
-            everestConsumer.getRequest(latestVerificationRequestId[_whose])
-        returns (IEverestConsumer.Request memory request) {
-            kycResponse.isHumanAndUnique = request.isHumanAndUnique;
-            kycResponse.isKYCUser = request.isKYCUser;
-            kycResponse.kycTimestamp = request.kycTimestamp;
-        } catch {}
+        bytes32 requestId = latestVerificationRequestId[_whose];
+
+        if (requestId == bytes32(0)) {
+            return kycResponse;
+        }
+
+        IEverestConsumer.Request memory request = everestConsumer.getRequest(
+            requestId
+        );
+
+        kycResponse.isHumanAndUnique = request.isHumanAndUnique;
+        kycResponse.isKYCUser = request.isKYCUser;
+        kycResponse.kycTimestamp = request.kycTimestamp;
     }
 }

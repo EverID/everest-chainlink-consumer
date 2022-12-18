@@ -7,7 +7,7 @@ const { constants, expectRevert, BN } = require("@openzeppelin/test-helpers");
 const { expect } = require("chai");
 const { oracle } = require("@chainlink/test-helpers");
 
-contract.only("ExampleContract", function ([owner, revealee, random, node]) {
+contract("ExampleContract", function ([owner, revealee, random, node]) {
     const jobId = "509e8dd8de054d3f918640ab0a2b77d8";
     const oraclePayment = "1000000000000000000"; // 10 ** 18
     const defaultSignUpURL = "https://everest.org";
