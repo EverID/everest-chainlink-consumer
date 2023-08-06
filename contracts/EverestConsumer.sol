@@ -8,6 +8,15 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IEverestConsumer.sol";
 
+error EverestConsumer__RequestDoesNotExist();
+error EverestConsumer__RevealeeShouldNotBeZeroAddress();
+error EverestConsumer__KycTimestampShouldNotBeZeroForKycUser();
+error EverestConsumer__KycTimestampShouldBeZeroForNonKycUser();
+error EverestConsumer__RequestAlreadyHandled();
+error EverestConsumer__NotOwnerOfRequest();
+error EverestConsumer__NoRequestsYet();
+error EverestConsumer__IncorrectLength();
+
 contract EverestConsumer is IEverestConsumer, ChainlinkClient, Ownable {
     using Chainlink for Chainlink.Request;
     using SafeERC20 for IERC20;
@@ -26,23 +35,16 @@ contract EverestConsumer is IEverestConsumer, ChainlinkClient, Ownable {
     bytes32 public override jobId;
     uint256 public override oraclePayment;
 
-    event Requested(
-        bytes32 _requestId,
-        address indexed _revealer,
-        address indexed _revealee,
-        uint40 _expiration
-    );
+    event Requested(bytes32 _requestId, address indexed _revealer, address indexed _revealee, uint40 _expiration);
 
     event Fulfilled(
-        bytes32 _requestId,
-        address indexed _revealer,
-        address indexed _revealee,
-        Status _status,
-        uint40 _kycTimestamp
+        bytes32 _requestId, address indexed _revealer, address indexed _revealee, Status _status, uint40 _kycTimestamp
     );
 
     modifier ifRequestExists(bytes32 requestId) {
-        require(requestExists(requestId), "Request does not exist");
+        if (!requestExists(requestId)) {
+            revert EverestConsumer__RequestDoesNotExist();
+        }
         _;
     }
 
@@ -61,18 +63,13 @@ contract EverestConsumer is IEverestConsumer, ChainlinkClient, Ownable {
     }
 
     function requestStatus(address _revealee) external override {
-        require(_revealee != address(0), "Revelaee should not be zero address");
+        if (_revealee == address(0)) {
+            revert EverestConsumer__RevealeeShouldNotBeZeroAddress();
+        }
 
-        IERC20(chainlinkTokenAddress()).safeTransferFrom(
-            msg.sender,
-            address(this),
-            oraclePayment
-        );
+        IERC20(chainlinkTokenAddress()).safeTransferFrom(msg.sender, address(this), oraclePayment);
 
-        Chainlink.Request memory request = buildOperatorRequest(
-            jobId,
-            this.fulfill.selector
-        );
+        Chainlink.Request memory request = buildOperatorRequest(jobId, this.fulfill.selector);
         request.addBytes("address", abi.encode(_revealee));
 
         bytes32 requestId = sendOperatorRequest(request, oraclePayment);
@@ -93,21 +90,19 @@ contract EverestConsumer is IEverestConsumer, ChainlinkClient, Ownable {
         emit Requested(requestId, msg.sender, _revealee, expiration);
     }
 
-    function fulfill(
-        bytes32 _requestId,
-        Status _status,
-        uint40 _kycTimestamp
-    ) external override recordChainlinkFulfillment(_requestId) {
+    function fulfill(bytes32 _requestId, Status _status, uint40 _kycTimestamp)
+        external
+        override
+        recordChainlinkFulfillment(_requestId)
+    {
         if (_status == Status.KYCUser) {
-            require(
-                _kycTimestamp != 0,
-                "_kycTimestamp should not be zero for KYCUser"
-            );
+            if (_kycTimestamp == 0) {
+                revert EverestConsumer__KycTimestampShouldNotBeZeroForKycUser();
+            }
         } else {
-            require(
-                _kycTimestamp == 0,
-                "_kycTimestamp should be zero for non-KYCUser"
-            );
+            if (_kycTimestamp != 0) {
+                revert EverestConsumer__KycTimestampShouldBeZeroForNonKycUser();
+            }
         }
 
         Request storage request = _requests[_requestId];
@@ -117,76 +112,48 @@ contract EverestConsumer is IEverestConsumer, ChainlinkClient, Ownable {
         request.isKYCUser = _status == Status.KYCUser;
         latestFulfilledRequestId[request.revealee] = _requestId;
 
-        emit Fulfilled(
-            _requestId,
-            request.revealer,
-            request.revealee,
-            _status,
-            _kycTimestamp
-        );
+        emit Fulfilled(_requestId, request.revealer, request.revealee, _status, _kycTimestamp);
     }
 
-    function cancelRequest(
-        bytes32 _requestId
-    ) external override ifRequestExists(_requestId) {
+    function cancelRequest(bytes32 _requestId) external override ifRequestExists(_requestId) {
         Request storage request = _requests[_requestId];
-        require(
-            !request.isCanceled && !request.isFulfilled,
-            "Request should not be canceled or fulfilled"
-        );
-        require(
-            request.revealer == msg.sender,
-            "You are not an owner of the request"
-        );
-        cancelChainlinkRequest(
-            _requestId,
-            oraclePayment,
-            this.fulfill.selector,
-            request.expiration
-        );
+        if (request.isCanceled || request.isFulfilled) {
+            revert EverestConsumer__RequestAlreadyHandled();
+        }
+
+        if (request.revealer != msg.sender) {
+            revert EverestConsumer__NotOwnerOfRequest();
+        }
+        cancelChainlinkRequest(_requestId, oraclePayment, this.fulfill.selector, request.expiration);
         IERC20(chainlinkTokenAddress()).safeTransfer(msg.sender, oraclePayment);
         request.isCanceled = true;
     }
 
-    function getRequest(
-        bytes32 _requestId
-    )
-        public
-        view
-        override
-        ifRequestExists(_requestId)
-        returns (Request memory)
-    {
+    function getRequest(bytes32 _requestId) public view override ifRequestExists(_requestId) returns (Request memory) {
         return _requests[_requestId];
     }
 
-    function getLatestFulfilledRequest(
-        address _revealee
-    ) external view override returns (Request memory) {
+    function getLatestFulfilledRequest(address _revealee) external view override returns (Request memory) {
         return getRequest(latestFulfilledRequestId[_revealee]);
     }
 
-    function setSignUpURL(
-        string memory _signUpURL
-    ) external override onlyOwner {
+    function setSignUpURL(string memory _signUpURL) external override onlyOwner {
         signUpURL = _signUpURL;
     }
 
     function getLatestSentRequestId() external view override returns (bytes32) {
-        require(latestSentRequestId[msg.sender] != 0, "No requests yet");
+        if (latestSentRequestId[msg.sender] == 0) {
+            revert EverestConsumer__NoRequestsYet();
+        }
 
         return latestSentRequestId[msg.sender];
     }
 
-    function requestExists(
-        bytes32 _requestId
-    ) public view override returns (bool) {
+    function requestExists(bytes32 _requestId) public view override returns (bool) {
         return _requests[_requestId].revealer != address(0);
     }
 
-    function statusToString(
-        Status _status
-    ) external pure override returns (string memory) {
+    function statusToString(Status _status) external pure override returns (string memory) {
         if (_status == Status.KYCUser) {
             return "KYC_USER";
         }
@@ -204,9 +171,7 @@ contract EverestConsumer is IEverestConsumer, ChainlinkClient, Ownable {
         setChainlinkToken(_link);
     }
 
-    function setOraclePayment(
-        uint256 _oraclePayment
-    ) external override onlyOwner {
+    function setOraclePayment(uint256 _oraclePayment) external override onlyOwner {
         oraclePayment = _oraclePayment;
     }
 
@@ -222,11 +187,12 @@ contract EverestConsumer is IEverestConsumer, ChainlinkClient, Ownable {
         return chainlinkTokenAddress();
     }
 
-    function stringToBytes32(
-        string memory _source
-    ) private pure returns (bytes32) {
+    function stringToBytes32(string memory _source) private pure returns (bytes32) {
         bytes memory source = bytes(_source);
-        require(source.length == 32, "Incorrect length");
+        if (source.length != 32) {
+            revert EverestConsumer__IncorrectLength();
+        }
+
         return bytes32(source);
     }
 }

@@ -32,6 +32,7 @@
   "devDependencies": {
     "@openzeppelin/test-helpers": "^0.5.15",
     "chai": "^4.3.6",
+    "eth-gas-reporter": "^0.2.25",
     "mocha": "^10.0.0",
     "prettier": "^2.7.1",
     "solhint-plugin-prettier": "^0.0.5"

@@ -9,7 +9,15 @@ module.exports = {
         },
     },
 
-    mocha: {},
+    plugins: ["eth-gas-reporter"],
+
+    mocha: {
+        reporter: "eth-gas-reporter",
+        reporterOptions: {
+            currency: "USD", // Shows gas prices in USD
+            gasPrice: 21, // Default gas price in gwei
+        },
+    },
 
     compilers: {
         solc: {

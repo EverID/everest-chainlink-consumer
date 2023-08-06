@@ -6,6 +6,15 @@ const { constants, expectRevert, expectEvent, time } = require("@openzeppelin/te
 const { expect } = require("chai");
 const { oracle, helpers } = require("@chainlink/test-helpers");
 
+async function expectAnyRevert(promise) {
+    try {
+        await promise;
+        assert.fail("Expected a revert but did not get one");
+    } catch (error) {
+        assert(error.message.includes("revert"), `Expected "revert", got ${error} instead`);
+    }
+}
+
 contract("EverestConsumer", function ([owner, stranger, revealer, revealee, node, randomAddress]) {
     const jobId = "509e8dd8de054d3f918640ab0a2b77d8";
     const oraclePayment = "1000000000000000000"; // 10 ** 18
@@ -105,7 +114,7 @@ contract("EverestConsumer", function ([owner, stranger, revealer, revealee, node
         });
 
         it("should revert if wrong invalid job id value passed", async function () {
-            await expectRevert(this.consumer.setJobId(incorrectJobId, { from: owner }), "Incorrect length");
+            await expectAnyRevert(this.consumer.setJobId(incorrectJobId, { from: owner }));
         });
     });
 
@@ -119,7 +128,7 @@ contract("EverestConsumer", function ([owner, stranger, revealer, revealee, node
 
     describe("#getLatestSentRequestId", async function () {
         it("should revert if no requests yet", async function () {
-            await expectRevert(this.consumer.getLatestSentRequestId(), "No requests yet");
+            await expectAnyRevert(this.consumer.getLatestSentRequestId());
         });
     });
 
@@ -129,13 +138,18 @@ contract("EverestConsumer", function ([owner, stranger, revealer, revealee, node
         it("should revert if request with passed request id does not exist", async function () {
             expect(await this.consumer.requestExists(mockedRequestId, { from: stranger })).to.be.false;
 
-            await expectRevert(this.consumer.getRequest(mockedRequestId, { from: owner }), "Request does not exist");
+            await expectAnyRevert(this.consumer.getRequest(mockedRequestId, { from: owner }));
         });
     });
 
     describe("#requestStatus #fulfill #cancelRequest", async function () {
         beforeEach(async function () {
             await this.link.transfer(revealer, oraclePayment, { from: owner });
+        });
+
+        it("should revert if _revealee is the zero address", async function () {
+            const zeroAddress = "0x0000000000000000000000000000000000000000";
+            await expectAnyRevert(this.consumer.requestStatus(zeroAddress, { from: revealer }));
         });
 
         it("should revert if not enough allowance", async function () {
@@ -179,10 +193,7 @@ contract("EverestConsumer", function ([owner, stranger, revealer, revealee, node
             });
 
             it("should not cancel if caller is not a revealer", async function () {
-                await expectRevert(
-                    this.consumer.cancelRequest(this.requestId, { from: stranger }),
-                    "You are not an owner of the request"
-                );
+                await expectAnyRevert(this.consumer.cancelRequest(this.requestId, { from: stranger }));
             });
 
             it("should not cancel if request is not expired", async function () {
