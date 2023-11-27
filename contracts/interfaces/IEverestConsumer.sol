@@ -6,10 +6,10 @@ interface IEverestConsumer {
     enum Status {
         // Address does not exist
         NotFound,
-        // KYC User status
-        KYCUser,
         // Human & Unique status
-        HumanAndUnique
+        HumanAndUnique,
+        // KYC User status
+        KYCUser
     }
 
     struct Request {
@@ -57,7 +57,7 @@ interface IEverestConsumer {
     /// @param _status A KYC status from the everest API response:
     /// 0 - `NotFound`: `isHumanAndUnique`=false and `isKYCUser`=false
     /// 1 - `HumanAndUnique`: `isHumanAndUnique`=true and `isKYCUser`=false
-    /// 2 - `NotFound`: `isHumanAndUnique`=true and `isKYCUser`=true
+    /// 2 - `KYCUser`: `isHumanAndUnique`=true and `isKYCUser`=true
     /// @param _kycTimestamp A KYC timestamp from the everest API response
     function fulfill(
         bytes32 _requestId,
